@@ -6,7 +6,7 @@ import "./App.css";
 import 'react-timelines/lib/css/style.css'
 
 import { START_YEAR, NUM_OF_YEARS, NUM_OF_TRACKS } from './constants'
-import { buildTimebar, buildTrack } from './builders'
+import { buildTimebar, buildTrack, buildSubtrack } from './builders'
 import { fill } from './utils'
 
 const monday = mondaySdk();
@@ -23,12 +23,6 @@ class App extends React.Component {
   constructor(props) {
     super(props);
 
-    const tracksById = fill(NUM_OF_TRACKS).reduce((acc, i) => {
-      const track = buildTrack(i + 1)
-      acc[track.id] = track
-      return acc
-    }, {})
-
     // Default state
     this.state = {
       settings: {},
@@ -41,8 +35,7 @@ class App extends React.Component {
       open: false,
       zoom: 2,
       // eslint-disable-next-line react/no-unused-state
-      tracksById,
-      tracks: Object.values(tracksById)
+      tracks: []
     };
   }
 
@@ -103,8 +96,23 @@ class App extends React.Component {
         }`);
       }).then((res) => {
         this.setState({teams: res.data.teams});
+        this.fillTracksWithTeams();
       })
     })
+  }
+
+  fillTracksWithTeams() {
+    this.setState({tracks: this.state.teams
+      .map(team => {
+        const track = buildTrack(team.id, team.name);
+        team.users.forEach(user => {
+          track.tracks.push(buildSubtrack(team.id, user.id, user.name))
+        });
+        return track;
+      })
+    });
+    //this.setState({tracks: Object.values(this.state.tracks)});
+    //console.log(this.state.tracks)
   }
 
   handleToggleOpen = () => {
@@ -120,20 +128,12 @@ class App extends React.Component {
   }
 
   handleToggleTrackOpen = track => {
-    this.setState(state => {
-      const tracksById = {
-        ...state.tracksById,
-        [track.id]: {
-          ...track,
-          isOpen: !track.isOpen,
-        },
-      }
-
-      return {
-        tracksById,
-        tracks: Object.values(tracksById),
-      }
-    })
+    this.setState({tracks: this.state.tracks
+      .map(t => {
+        if (track.id === t.id ) t.isOpen = !t.isOpen;
+        return t;
+      })
+    });
   }
 
   // render() {
@@ -151,7 +151,6 @@ class App extends React.Component {
     const end = new Date(`${START_YEAR + NUM_OF_YEARS}`)
     return (
       <div className="app">
-        <h1 className="title">Teams</h1>
         <Timeline
           scale={{
             start,

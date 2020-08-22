@@ -115,19 +115,19 @@ export const buildElements = trackId => {
   return v
 }
 
-export const buildSubtrack = (trackId, subtrackId) => ({
+export const buildSubtrack = (trackId, subtrackId, subtrackName) => ({
   id: `track-${trackId}-${subtrackId}`,
-  title: `Subtrack ${subtrackId}`,
+  title: subtrackName,
   elements: buildElements(subtrackId),
 })
 
-export const buildTrack = trackId => {
-  const tracks = fill(Math.floor(Math.random() * MAX_NUM_OF_SUBTRACKS) + 1).map(i => buildSubtrack(trackId, i + 1))
+export const buildTrack = (trackId, trackName) => {
+  //const tracks = fill(Math.floor(Math.random() * MAX_NUM_OF_SUBTRACKS) + 1).map(i => buildSubtrack(trackId, i + 1))
   return {
     id: `track-${trackId}`,
-    title: `Track ${trackId}`,
+    title: trackName,
     elements: buildElements(trackId),
-    tracks,
+    tracks: [],
     // hasButton: true,
     // link: 'www.google.com',
     isOpen: false,
