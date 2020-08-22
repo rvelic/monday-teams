@@ -1,11 +1,33 @@
-import React from "react";
-import "./App.css";
+import React, { Component } from "react";
 import mondaySdk from "monday-sdk-js";
+import Timeline from 'react-timelines';
+
+import "./App.css";
+import 'react-timelines/lib/css/style.css'
+
+import { START_YEAR, NUM_OF_YEARS, NUM_OF_TRACKS } from './constants'
+import { buildTimebar, buildTrack } from './builders'
+import { fill } from './utils'
+
 const monday = mondaySdk();
+const now = new Date()
+const timebar = buildTimebar()
+
+// eslint-disable-next-line no-alert
+const clickElement = element => alert(`Clicked element\n${JSON.stringify(element, null, 2)}`)
+
+const MIN_ZOOM = 2
+const MAX_ZOOM = 20
 
 class App extends React.Component {
   constructor(props) {
     super(props);
+
+    const tracksById = fill(NUM_OF_TRACKS).reduce((acc, i) => {
+      const track = buildTrack(i + 1)
+      acc[track.id] = track
+      return acc
+    }, {})
 
     // Default state
     this.state = {
@@ -15,7 +37,12 @@ class App extends React.Component {
       items: [],
       teamIds: [],
       teams: [],
-      name: ""
+      name: "",
+      open: false,
+      zoom: 2,
+      // eslint-disable-next-line react/no-unused-state
+      tracksById,
+      tracks: Object.values(tracksById)
     };
   }
 
@@ -80,13 +107,77 @@ class App extends React.Component {
     })
   }
 
+  handleToggleOpen = () => {
+    this.setState(({ open }) => ({ open: !open }))
+  }
+
+  handleZoomIn = () => {
+    this.setState(({ zoom }) => ({ zoom: Math.min(zoom + 1, MAX_ZOOM) }))
+  }
+
+  handleZoomOut = () => {
+    this.setState(({ zoom }) => ({ zoom: Math.max(zoom - 1, MIN_ZOOM) }))
+  }
+
+  handleToggleTrackOpen = track => {
+    this.setState(state => {
+      const tracksById = {
+        ...state.tracksById,
+        [track.id]: {
+          ...track,
+          isOpen: !track.isOpen,
+        },
+      }
+
+      return {
+        tracksById,
+        tracks: Object.values(tracksById),
+      }
+    })
+  }
+
+  // render() {
+  //   return <div className="App">
+  //     {this.state.teams.map((team) => {
+  //       return <div><p>{team.id}</p>
+  //       <p>{team.name}</p></div>
+  //     })}
+  //   </div>;
+  // }
+
   render() {
-    return <div className="App">
-      {this.state.teams.map((team) => {
-        return <div><p>{team.id}</p>
-        <p>{team.name}</p></div>
-      })}
-    </div>;
+    const { open, zoom, tracks } = this.state
+    const start = new Date(`${START_YEAR}`)
+    const end = new Date(`${START_YEAR + NUM_OF_YEARS}`)
+    return (
+      <div className="app">
+        <h1 className="title">Teams</h1>
+        <Timeline
+          scale={{
+            start,
+            end,
+            zoom,
+            zoomMin: MIN_ZOOM,
+            zoomMax: MAX_ZOOM,
+          }}
+          isOpen={open}
+          toggleOpen={this.handleToggleOpen}
+          zoomIn={this.handleZoomIn}
+          zoomOut={this.handleZoomOut}
+          clickElement={clickElement}
+          clickTrackButton={track => {
+            // eslint-disable-next-line no-alert
+            alert(JSON.stringify(track))
+          }}
+          timebar={timebar}
+          tracks={tracks}
+          now={now}
+          toggleTrackOpen={this.handleToggleTrackOpen}
+          enableSticky
+          scrollToNow
+        />
+      </div>
+    )
   }
 }
 
