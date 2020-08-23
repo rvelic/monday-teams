@@ -1,4 +1,4 @@
-import React, { Component } from "react";
+import React from "react";
 import mondaySdk from "monday-sdk-js";
 import moment from 'moment';
 import Timeline from 'react-timelines';
@@ -6,15 +6,22 @@ import Timeline from 'react-timelines';
 import "./App.css";
 import 'react-timelines/lib/css/style.css'
 
-import { START_DATE, END_DATE, NUM_OF_WEEKS, MIN_ZOOM, MAX_ZOOM } from './constants'
-import { buildTimebar, buildTrack, buildSubtrack } from './builders'
+import { NOW, NOW_UTC_HOURS_DIFF, START_DATE, END_DATE, MIN_ZOOM, MAX_ZOOM } from './constants'
+import { buildTimebar, buildTrack, buildSubtrack, buildElements } from './builders'
 
 const monday = mondaySdk()
-const now = moment().toDate()
 const timebar = buildTimebar()
 
 // eslint-disable-next-line no-alert
 const clickElement = element => alert(`Clicked element\n${JSON.stringify(element, null, 2)}`)
+
+const userTimespan = (users) => users
+  .reduce((acc, user) => {
+    if (!acc[0] || user.utc_hours_diff < acc[0]) acc[0] = user.utc_hours_diff //min
+    if (!acc[1] || user.utc_hours_diff > acc[1]) acc[1] = user.utc_hours_diff //max
+    return acc
+  }, [null, null])
+  .map(span => moment.utc(NOW).add(NOW_UTC_HOURS_DIFF - span, 'h').local())
 
 class App extends React.Component {
   constructor(props) {
@@ -87,6 +94,7 @@ class App extends React.Component {
               id
               name
               time_zone_identifier
+              utc_hours_diff
             }
           }
         }`);
@@ -100,15 +108,30 @@ class App extends React.Component {
   fillTracksWithTeams() {
     this.setState({tracks: this.state.teams
       .map(team => {
+        const uts = userTimespan(team.users)
+        const span = uts[0].diff(uts[1], 'hours') + this.state.settings.workdayHours
         const track = buildTrack(team.id, team.name);
-        team.users.forEach(user => {
-          track.tracks.push(buildSubtrack(team.id, user.id, user.name))
-        });
+        track.tracks = team.users.map(user => this.fillSubTracksWithUsers(team.id, user.id, user.name, user.utc_hours_diff));
+        track.elements = buildElements(
+          team.id,
+          team.name,
+          NOW,
+          span
+        )
         return track;
       })
     });
-    //this.setState({tracks: Object.values(this.state.tracks)});
-    //console.log(this.state.tracks)
+  }
+
+  fillSubTracksWithUsers = (teamId, userId, userName, utcDiff) => {
+    const track = buildSubtrack(teamId, userId, userName)
+    track.elements = buildElements(
+      teamId,
+      userName,
+      moment.utc(NOW).add(NOW_UTC_HOURS_DIFF - utcDiff, 'h'),
+      this.state.settings.workdayHours
+    )
+    return track;
   }
 
   handleToggleOpen = () => {
@@ -155,7 +178,7 @@ class App extends React.Component {
           }}
           timebar={timebar}
           tracks={tracks}
-          now={now}
+          now={NOW.toDate()}
           toggleTrackOpen={this.handleToggleTrackOpen}
           enableSticky
           scrollToNow

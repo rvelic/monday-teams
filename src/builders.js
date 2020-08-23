@@ -1,27 +1,12 @@
 import {
   START_DATE,
-  START_YEAR,
-  NUM_OF_YEARS,
-  MONTH_NAMES,
-  MONTHS_PER_YEAR,
-  QUARTERS_PER_YEAR,
-  MONTHS_PER_QUARTER,
-  NUM_OF_MONTHS,
-  MAX_TRACK_START_GAP,
-  MAX_ELEMENT_GAP,
-  MAX_MONTH_SPAN,
-  MIN_MONTH_SPAN,
   NUM_OF_WEEKS,
-  HOURS_PER_WEEK,
   DAYS_PER_WEEK,
-  HOURS_PER_DAY,
   NUM_OF_HOURS,
-  MAX_HOUR_SPAN,
-  MIN_HOUR_SPAN
+  NUM_OF_DAYS
 } from './constants'
 
-import moment from 'moment'
-import { fill, hexToRgb, colourIsLight, addMonthsToYear, addMonthsToYearAsDate, nextColor, randomTitle } from './utils'
+import { hexToRgb, colourIsLight, nextColor } from './utils'
 
 export const buildDayCells = () => {
   const m = START_DATE.clone()
@@ -29,7 +14,7 @@ export const buildDayCells = () => {
   for (let i = 0; i < DAYS_PER_WEEK * NUM_OF_WEEKS; i += 1) {
     const day = {
       id: `w${m.isoWeek()}-d${m.weekday()}`,
-      title: m.format('ddd DD.MMM YYYY'),
+      title: m.format('ddd DD. MMM YYYY'),
       start: m.startOf('day').toDate()
     }
     m.add(1, 'd')
@@ -71,67 +56,44 @@ export const buildTimebar = () => [
   }
 ]
 
-export const buildElement = ({ trackId, start, end, i }) => {
+export const buildElements = (trackId, trackName, start, span) => {
+  const v = []
+  // Rewind to start of the week but keep the hours
+  const m = start.clone().startOf('isoWeek').hour(start.hour())
   const bgColor = nextColor()
   const color = colourIsLight(...hexToRgb(bgColor)) ? '#000000' : '#ffffff'
-  return {
-    id: `t-${trackId}-el-${i}`,
-    title: randomTitle(),
-    start,
-    end,
-    style: {
-      backgroundColor: `#${bgColor}`,
-      color,
-      borderRadius: '4px',
-      boxShadow: '1px 1px 0px rgba(0, 0, 0, 0.25)',
-      textTransform: 'capitalize',
-    },
-  }
-}
-
-export const buildTrackStartGap = () => Math.floor(Math.random() * MAX_TRACK_START_GAP)
-export const buildElementGap = () => Math.floor(Math.random() * MAX_ELEMENT_GAP)
-
-export const buildElements = trackId => {
-  const v = []
-  let i = 1
-  let hour = buildTrackStartGap()
-
-  while (hour < NUM_OF_HOURS) {
-    let hourSpan = Math.floor(Math.random() * (MAX_HOUR_SPAN - (MIN_HOUR_SPAN - 1))) + MIN_HOUR_SPAN
-
-    if (hour + hourSpan > NUM_OF_HOURS) {
-      hourSpan = NUM_OF_HOURS - hour
+  for (let i = 0; i < NUM_OF_DAYS; i += 1) { 
+    const element = {
+      id: `t-${trackId}-el-${i}`,
+      title: trackName,
+      start: m.startOf('hour').toDate(),
+      end: m.clone().add(span, 'h').toDate(),
+      style: {
+        backgroundColor: `#${bgColor}`,
+        color,
+        borderRadius: '4px',
+        boxShadow: '1px 1px 0px rgba(0, 0, 0, 0.25)',
+        textTransform: 'capitalize',
+      }
     }
-
-    v.push(buildElement({
-      trackId,
-      start: START_DATE.clone().add(hour, 'h').toDate(),
-      end: START_DATE.clone().add(hour + hourSpan, 'h').toDate(),
-      i,
-    }))
-    const gap = buildElementGap()
-    hour += hourSpan + gap
-    i += 1
+    m.add(1, 'd')
+    v.push(element)
   }
-
   return v
 }
 
 export const buildSubtrack = (trackId, subtrackId, subtrackName) => ({
   id: `track-${trackId}-${subtrackId}`,
   title: subtrackName,
-  elements: buildElements(subtrackId),
+  elements: []
 })
 
-export const buildTrack = (trackId, trackName) => {
-  return {
-    id: `track-${trackId}`,
-    title: trackName,
-    elements: buildElements(trackId),
-    tracks: [],
-    // hasButton: true,
-    // link: 'www.google.com',
-    isOpen: false,
-  }
-}
+export const buildTrack = (trackId, trackName) => ({
+  id: `track-${trackId}`,
+  title: trackName,
+  elements: [],
+  tracks: [],
+  // hasButton: true,
+  // link: 'www.google.com',
+  isOpen: false
+})
