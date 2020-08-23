@@ -1,6 +1,6 @@
 /* eslint-disable no-bitwise */
 
-import { MONTHS_PER_YEAR } from './constants'
+import { MONTHS_PER_YEAR, HOURS_PER_WEEK} from './constants'
 
 export const fill = n => {
   const arr = []
@@ -60,6 +60,16 @@ export const addMonthsToYear = (year, monthsToAdd) => {
     y += 1
   }
   return { year: y, month: m + 1 }
+}
+
+export const addHoursToWeek = (week, hoursToAdd) => {
+  let w = week
+  let h = hoursToAdd
+  while (h >= HOURS_PER_WEEK) {
+    h -= HOURS_PER_WEEK
+    w += 1
+  }
+  return { week: w, hour: h + 1 }
 }
 
 export const addMonthsToYearAsDate = (year, monthsToAdd) => {

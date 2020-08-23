@@ -1,23 +1,20 @@
 import React, { Component } from "react";
 import mondaySdk from "monday-sdk-js";
+import moment from 'moment';
 import Timeline from 'react-timelines';
 
 import "./App.css";
 import 'react-timelines/lib/css/style.css'
 
-import { START_YEAR, NUM_OF_YEARS, NUM_OF_TRACKS } from './constants'
+import { START_DATE, END_DATE, NUM_OF_WEEKS, MIN_ZOOM, MAX_ZOOM } from './constants'
 import { buildTimebar, buildTrack, buildSubtrack } from './builders'
-import { fill } from './utils'
 
-const monday = mondaySdk();
-const now = new Date()
+const monday = mondaySdk()
+const now = moment().toDate()
 const timebar = buildTimebar()
 
 // eslint-disable-next-line no-alert
 const clickElement = element => alert(`Clicked element\n${JSON.stringify(element, null, 2)}`)
-
-const MIN_ZOOM = 2
-const MAX_ZOOM = 20
 
 class App extends React.Component {
   constructor(props) {
@@ -33,8 +30,7 @@ class App extends React.Component {
       teams: [],
       name: "",
       open: false,
-      zoom: 2,
-      // eslint-disable-next-line react/no-unused-state
+      zoom: 1800,
       tracks: []
     };
   }
@@ -120,11 +116,11 @@ class App extends React.Component {
   }
 
   handleZoomIn = () => {
-    this.setState(({ zoom }) => ({ zoom: Math.min(zoom + 1, MAX_ZOOM) }))
+    this.setState(({ zoom }) => ({ zoom: Math.min(zoom + 100, MAX_ZOOM) }))
   }
 
   handleZoomOut = () => {
-    this.setState(({ zoom }) => ({ zoom: Math.max(zoom - 1, MIN_ZOOM) }))
+    this.setState(({ zoom }) => ({ zoom: Math.max(zoom - 100, MIN_ZOOM) }))
   }
 
   handleToggleTrackOpen = track => {
@@ -136,25 +132,14 @@ class App extends React.Component {
     });
   }
 
-  // render() {
-  //   return <div className="App">
-  //     {this.state.teams.map((team) => {
-  //       return <div><p>{team.id}</p>
-  //       <p>{team.name}</p></div>
-  //     })}
-  //   </div>;
-  // }
-
   render() {
     const { open, zoom, tracks } = this.state
-    const start = new Date(`${START_YEAR}`)
-    const end = new Date(`${START_YEAR + NUM_OF_YEARS}`)
     return (
       <div className="app">
         <Timeline
           scale={{
-            start,
-            end,
+            start: START_DATE.toDate(),
+            end: END_DATE.toDate(),
             zoom,
             zoomMin: MIN_ZOOM,
             zoomMax: MAX_ZOOM,
