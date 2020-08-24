@@ -6,6 +6,7 @@ import "./App.css"
 import 'react-timelines/lib/css/style.css'
 import { NOW, NOW_UTC_HOURS_DIFF, START_DATE, END_DATE, MIN_ZOOM, MAX_ZOOM } from './constants'
 import { buildTimebar, buildTrack, buildSubtrack, buildElements } from './builders'
+import { nextColor } from './utils'
 
 const monday = mondaySdk()
 const timebar = buildTimebar()
@@ -105,28 +106,31 @@ class App extends React.Component {
       .map(team => {
         const uts = userTimespan(team.users)
         const span = (uts.end - uts.start) + parseInt(this.state.settings.workdayHours)
+        const color = nextColor()
         const track = buildTrack(team.id, team.name);
-        track.tracks = team.users.map(user => this.fillSubTracksWithUsers(team.id, user.id, user.name, user.utc_hours_diff));
+        track.tracks = team.users.map(user => this.fillSubTracksWithUsers(team.id, user.id, user.name, user.utc_hours_diff, color));
         track.elements = buildElements(
           team.id,
           team.name,
           moment.utc(this.state.workdayStartMoment).add(NOW_UTC_HOURS_DIFF - uts.end, 'h'),
           span,
-          'team'
+          'team',
+          color
         )
         return track;
       })
     });
   }
 
-  fillSubTracksWithUsers = (teamId, userId, userName, utcDiff) => {
+  fillSubTracksWithUsers = (teamId, userId, userName, utcDiff, color) => {
     const track = buildSubtrack(teamId, userId, userName)
     track.elements = buildElements(
       teamId,
       userName,
       moment.utc(this.state.workdayStartMoment).add(NOW_UTC_HOURS_DIFF - utcDiff, 'h'),
       this.state.settings.workdayHours,
-      'user'
+      'user',
+      color
     )
     return track;
   }
