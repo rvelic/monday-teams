@@ -30,6 +30,7 @@ class App extends React.Component {
     // Default state
     this.state = {
       settings: {},
+      workdayStartMoment: null,
       context: {},
       itemIds: [],
       items: [],
@@ -45,6 +46,7 @@ class App extends React.Component {
   componentDidMount() {
     monday.listen('settings', (res) => {
       this.setState({settings: res.data});
+      this.setState({workdayStartMoment: NOW.clone().hours(res.data.workdayStart)})
     })
 
     monday.listen('context', (res) => {
@@ -93,7 +95,6 @@ class App extends React.Component {
             users {
               id
               name
-              time_zone_identifier
               utc_hours_diff
             }
           }
@@ -115,7 +116,7 @@ class App extends React.Component {
         track.elements = buildElements(
           team.id,
           team.name,
-          NOW,
+          this.state.workdayStartMoment,
           span
         )
         return track;
@@ -128,7 +129,7 @@ class App extends React.Component {
     track.elements = buildElements(
       teamId,
       userName,
-      moment.utc(NOW).add(NOW_UTC_HOURS_DIFF - utcDiff, 'h'),
+      moment.utc(this.state.workdayStartMoment).add(NOW_UTC_HOURS_DIFF - utcDiff, 'h'),
       this.state.settings.workdayHours
     )
     return track;
