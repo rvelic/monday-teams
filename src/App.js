@@ -1,9 +1,9 @@
-import React from "react";
-import mondaySdk from "monday-sdk-js";
-import moment from 'moment';
-import Timeline from 'react-timelines';
+import React from "react"
+import mondaySdk from "monday-sdk-js"
+import moment from 'moment'
+import Timeline from 'react-timelines'
 
-import "./App.css";
+import "./App.css"
 import 'react-timelines/lib/css/style.css'
 
 import { NOW, NOW_UTC_HOURS_DIFF, START_DATE, END_DATE, MIN_ZOOM, MAX_ZOOM } from './constants'

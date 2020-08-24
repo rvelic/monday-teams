@@ -61,7 +61,7 @@ export const buildElements = (trackId, trackName, start, span) => {
   // Rewind to start of the week but keep the hours
   const m = start.clone().startOf('isoWeek').hour(start.hour())
   const bgColor = nextColor()
-  const color = colourIsLight(...hexToRgb(bgColor)) ? '#000000' : '#ffffff'
+  const color = colourIsLight(...hexToRgb(bgColor)) ? '#000000' : '#323338'
   for (let i = 0; i < NUM_OF_DAYS; i += 1) { 
     const element = {
       id: `t-${trackId}-el-${i}`,

@@ -8,7 +8,7 @@ export const fill = n => {
   return arr
 }
 
-const COLORS = ['FF005D', '0085B6', '0BB4C1', '00D49D', 'FEDF03', '233D4D', 'FE7F2D', 'FCCA46', 'A1C181', '579C87']
+const COLORS = ['00C875', '4ECCC6', 'FAA1F1', '66CCFF', '784BD1', 'FFCB00', '#5559DF', '579BFC', '68A1BD', 'FF7575']
 
 export const randomColor = () => COLORS[Math.floor(Math.random() * COLORS.length)]
 
