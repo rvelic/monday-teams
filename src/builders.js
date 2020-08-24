@@ -11,7 +11,7 @@ import { hexToRgb, colourIsLight, nextColor } from './utils'
 export const buildDayCells = () => {
   const m = START_DATE.clone()
   const v = []
-  for (let i = 0; i < DAYS_PER_WEEK * NUM_OF_WEEKS; i += 1) {
+  for (let i = 0; i < DAYS_PER_WEEK * NUM_OF_WEEKS; i++) {
     const day = {
       id: `w${m.isoWeek()}-d${m.weekday()}`,
       title: m.format('ddd DD. MMM YYYY'),
@@ -27,7 +27,7 @@ export const buildDayCells = () => {
 export const buildHourCells = () => {
   const m = START_DATE.clone()
   const v = []
-  for (let i = 0; i < NUM_OF_HOURS; i += 1) {
+  for (let i = 0; i < NUM_OF_HOURS; i++) {
     const hour = {
       id: `w${m.isoWeek()}-d${m.weekday()}-h${m.hour()}`,
       title: m.format('LT'),
@@ -56,18 +56,20 @@ export const buildTimebar = () => [
   }
 ]
 
-export const buildElements = (trackId, trackName, start, span) => {
+export const buildElements = (trackId, trackName, start, span, kind) => {
   const v = []
   // Rewind to start of the week but keep the hours
   const m = start.clone().startOf('isoWeek').hour(start.hour())
   const bgColor = nextColor()
   const color = colourIsLight(...hexToRgb(bgColor)) ? '#000000' : '#323338'
-  for (let i = 0; i < NUM_OF_DAYS; i += 1) {
+  for (let i = 0; i < NUM_OF_DAYS; i++) {
     const s = m.startOf('hour')
     const e = m.clone().add(span, 'h')
     const element = {
       id: `t-${trackId}-el-${i}`,
+      trackId,
       title: trackName,
+      kind, // 'team' or 'user'
       start: s.toDate(),
       end: e.toDate(),
       tooltip: `${trackName} ${s.format('LT')} - ${e.format('LT')}`,

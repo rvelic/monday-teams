@@ -12,9 +12,6 @@ import { buildTimebar, buildTrack, buildSubtrack, buildElements } from './builde
 const monday = mondaySdk()
 const timebar = buildTimebar()
 
-// eslint-disable-next-line no-alert
-const clickElement = element => alert(`Clicked element`)
-
 const userTimespan = (users, start) => users
   .reduce((acc, user) => {
     if (!acc[0] || user.utc_hours_diff < acc[0]) acc[0] = user.utc_hours_diff //min
@@ -29,7 +26,7 @@ class App extends React.Component {
 
     // Default state
     this.state = {
-      settings: {},
+      settings: {}, // {teamsColumn, activeTeamColumn, workdayStart, workdayHours}
       workdayStartMoment: null,
       context: {},
       itemIds: [],
@@ -117,7 +114,8 @@ class App extends React.Component {
           team.id,
           team.name,
           this.state.workdayStartMoment,
-          span
+          span,
+          'team'
         )
         return track;
       })
@@ -130,9 +128,50 @@ class App extends React.Component {
       teamId,
       userName,
       moment.utc(this.state.workdayStartMoment).add(NOW_UTC_HOURS_DIFF - utcDiff, 'h'),
-      this.state.settings.workdayHours
+      this.state.settings.workdayHours,
+      'user'
     )
     return track;
+  }
+
+  activateTeam = (teamId) => {
+    // We need to run JSON.stringify 2x to get correct format
+    const value = JSON.stringify(JSON.stringify({
+      "personsAndTeams": [{
+        "id": parseInt(teamId),
+        "kind": "team"
+      }]
+    }))
+    const board_id = parseInt(this.state.context.boardId)
+    const column_id = Object.keys(this.state.settings.activeTeamColumn).shift()
+
+    return Promise.all(this.state.itemIds.map(id => monday.api(`mutation {
+      change_column_value(
+        board_id: ${board_id},
+        item_id: ${id},
+        column_id: "${column_id}",
+        value: ${value}
+      ){
+        id
+      }
+    }`)))
+  }
+
+  handleClickElement = (element) => {
+    return element.kind !== 'team' ? null : monday
+      .execute('confirm', {
+        message: `<p><strong>Activate workday of ${element.title} team?</strong></p>
+                  <p>This will assign all displayed items to this team.</p>`,
+        confirmButton: 'Activate',
+        cancelButton: 'Cancel'
+    }).then((res) => {
+      return !res.data.confirm ? null : this.activateTeam(element.trackId)
+    }).then((res) => {
+      return !res ? null : monday.execute('notice', {
+        message: `${res.length} items updated.`,
+        type: 'success'
+      })
+    })
   }
 
   handleToggleOpen = () => {
@@ -172,7 +211,7 @@ class App extends React.Component {
           toggleOpen={this.handleToggleOpen}
           zoomIn={this.handleZoomIn}
           zoomOut={this.handleZoomOut}
-          clickElement={clickElement}
+          clickElement={this.handleClickElement}
           timebar={timebar}
           tracks={tracks}
           now={NOW.toDate()}
