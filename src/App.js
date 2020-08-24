@@ -24,7 +24,7 @@ class App extends React.Component {
 
     // Default state
     this.state = {
-      settings: {}, // {teamsColumn, activeTeamColumn, workdayStart, workdayHours}
+      settings: {}, // {teamsColumn, activeTeamColumn, ownerColumn, workdayStart, workdayHours}
       workdayStartMoment: null,
       context: {},
       itemIds: [],
@@ -82,8 +82,8 @@ class App extends React.Component {
             })
           return teamIds;
         }, [])});
-        
-        return monday.api(`query {
+        // clear tracks if no teamIds are found in items
+        return this.state.teamIds.length < 1 ? null : monday.api(`query {
           teams(ids:[${this.state.teamIds}]) {
             id
             name
@@ -95,7 +95,7 @@ class App extends React.Component {
           }
         }`);
       }).then((res) => {
-        this.setState({teams: res.data.teams});
+        this.setState({teams: res ? res.data.teams : []});
         this.fillTracksWithTeams();
       })
     })
