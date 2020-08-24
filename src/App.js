@@ -158,10 +158,9 @@ class App extends React.Component {
   }
 
   handleClickElement = (element) => {
-    return element.kind !== 'team' ? null : monday
-      .execute('confirm', {
+    return element.kind !== 'team' ? null : monday.execute('confirm', {
         message: `<p><strong>Activate workday of ${element.title} team?</strong></p>
-                  <p>This will assign all displayed items to this team.</p>`,
+                  <p>This will set ${element.title} as the "Active Team" on all displayed items.</p>`,
         confirmButton: 'Activate',
         cancelButton: 'Cancel'
     }).then((res) => {
