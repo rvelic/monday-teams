@@ -13,7 +13,7 @@ const monday = mondaySdk()
 const timebar = buildTimebar()
 
 // eslint-disable-next-line no-alert
-const clickElement = element => alert(`Clicked element\n${JSON.stringify(element, null, 2)}`)
+const clickElement = element => alert(`Clicked element`)
 
 const userTimespan = (users, start) => users
   .reduce((acc, user) => {
@@ -173,10 +173,6 @@ class App extends React.Component {
           zoomIn={this.handleZoomIn}
           zoomOut={this.handleZoomOut}
           clickElement={clickElement}
-          clickTrackButton={track => {
-            // eslint-disable-next-line no-alert
-            alert(JSON.stringify(track))
-          }}
           timebar={timebar}
           tracks={tracks}
           now={NOW.toDate()}
