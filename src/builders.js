@@ -62,17 +62,20 @@ export const buildElements = (trackId, trackName, start, span) => {
   const m = start.clone().startOf('isoWeek').hour(start.hour())
   const bgColor = nextColor()
   const color = colourIsLight(...hexToRgb(bgColor)) ? '#000000' : '#323338'
-  for (let i = 0; i < NUM_OF_DAYS; i += 1) { 
+  for (let i = 0; i < NUM_OF_DAYS; i += 1) {
+    const s = m.startOf('hour')
+    const e = m.clone().add(span, 'h')
     const element = {
       id: `t-${trackId}-el-${i}`,
       title: trackName,
-      start: m.startOf('hour').toDate(),
-      end: m.clone().add(span, 'h').toDate(),
+      start: s.toDate(),
+      end: e.toDate(),
+      tooltip: `${trackName} ${s.format('LT')} - ${e.format('LT')}`,
       style: {
         backgroundColor: `#${bgColor}`,
         color,
         borderRadius: '4px',
-        boxShadow: '1px 1px 0px rgba(0, 0, 0, 0.25)',
+        boxShadow: '0.0px 4.0px 8.0px 0px rgba(0, 0, 0, 0.1)',
         textTransform: 'capitalize',
       }
     }
