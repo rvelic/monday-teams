@@ -6,7 +6,7 @@ import {
   NUM_OF_DAYS
 } from './constants'
 
-import { hexToRgb, colourIsLight, nextColor } from './utils'
+import { nextColor } from './utils'
 
 export const buildDayCells = () => {
   const m = START_DATE.clone()
@@ -60,8 +60,8 @@ export const buildElements = (trackId, trackName, start, span, kind) => {
   const v = []
   // Rewind to start of the week but keep the hours
   const m = start.clone().startOf('isoWeek').hour(start.hour())
-  const bgColor = nextColor()
-  const color = colourIsLight(...hexToRgb(bgColor)) ? '#000000' : '#323338'
+  const bgColor = kind === 'team' ? '0085FF' : nextColor()
+  const color = kind === 'team' ? '#FFFFFF' : '#323338'
   for (let i = 0; i < NUM_OF_DAYS; i++) {
     const s = m.startOf('hour')
     const e = m.clone().add(span, 'h')
@@ -72,7 +72,7 @@ export const buildElements = (trackId, trackName, start, span, kind) => {
       kind, // 'team' or 'user'
       start: s.toDate(),
       end: e.toDate(),
-      tooltip: `${trackName} ${s.format('LT')} - ${e.format('LT')}`,
+      tooltip: `${trackName} ${s.local().format('LT')} - ${e.local().format('LT')}`,
       style: {
         backgroundColor: `#${bgColor}`,
         color,

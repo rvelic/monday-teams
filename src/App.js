@@ -2,23 +2,20 @@ import React from "react"
 import mondaySdk from "monday-sdk-js"
 import moment from 'moment'
 import Timeline from 'react-timelines'
-
 import "./App.css"
 import 'react-timelines/lib/css/style.css'
-
 import { NOW, NOW_UTC_HOURS_DIFF, START_DATE, END_DATE, MIN_ZOOM, MAX_ZOOM } from './constants'
 import { buildTimebar, buildTrack, buildSubtrack, buildElements } from './builders'
 
 const monday = mondaySdk()
 const timebar = buildTimebar()
 
-const userTimespan = (users, start) => users
+const userTimespan = (users) => users
   .reduce((acc, user) => {
-    if (!acc[0] || user.utc_hours_diff < acc[0]) acc[0] = user.utc_hours_diff //min
-    if (!acc[1] || user.utc_hours_diff > acc[1]) acc[1] = user.utc_hours_diff //max
+    if (!acc.start || user.utc_hours_diff < acc.start) acc.start = user.utc_hours_diff
+    if (!acc.end || user.utc_hours_diff > acc.end) acc.end = user.utc_hours_diff
     return acc
-  }, [null, null])
-  .map(span => moment.utc(start).add(NOW_UTC_HOURS_DIFF - span, 'h'))
+  }, {start: null, end: null})
 
 class App extends React.Component {
   constructor(props) {
@@ -106,14 +103,14 @@ class App extends React.Component {
   fillTracksWithTeams() {
     this.setState({tracks: this.state.teams
       .map(team => {
-        const uts = userTimespan(team.users, this.state.workdayStartMoment)
-        const span = uts[0].diff(uts[1], 'hours') + this.state.settings.workdayHours
+        const uts = userTimespan(team.users)
+        const span = (uts.end - uts.start) + parseInt(this.state.settings.workdayHours)
         const track = buildTrack(team.id, team.name);
         track.tracks = team.users.map(user => this.fillSubTracksWithUsers(team.id, user.id, user.name, user.utc_hours_diff));
         track.elements = buildElements(
           team.id,
           team.name,
-          this.state.workdayStartMoment,
+          moment.utc(this.state.workdayStartMoment).add(NOW_UTC_HOURS_DIFF - uts.end, 'h'),
           span,
           'team'
         )
