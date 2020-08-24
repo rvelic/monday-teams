@@ -15,13 +15,13 @@ const timebar = buildTimebar()
 // eslint-disable-next-line no-alert
 const clickElement = element => alert(`Clicked element\n${JSON.stringify(element, null, 2)}`)
 
-const userTimespan = (users) => users
+const userTimespan = (users, start) => users
   .reduce((acc, user) => {
     if (!acc[0] || user.utc_hours_diff < acc[0]) acc[0] = user.utc_hours_diff //min
     if (!acc[1] || user.utc_hours_diff > acc[1]) acc[1] = user.utc_hours_diff //max
     return acc
   }, [null, null])
-  .map(span => moment.utc(NOW).add(NOW_UTC_HOURS_DIFF - span, 'h').local())
+  .map(span => moment.utc(start).add(NOW_UTC_HOURS_DIFF - span, 'h'))
 
 class App extends React.Component {
   constructor(props) {
@@ -109,7 +109,7 @@ class App extends React.Component {
   fillTracksWithTeams() {
     this.setState({tracks: this.state.teams
       .map(team => {
-        const uts = userTimespan(team.users)
+        const uts = userTimespan(team.users, this.state.workdayStartMoment)
         const span = uts[0].diff(uts[1], 'hours') + this.state.settings.workdayHours
         const track = buildTrack(team.id, team.name);
         track.tracks = team.users.map(user => this.fillSubTracksWithUsers(team.id, user.id, user.name, user.utc_hours_diff));
