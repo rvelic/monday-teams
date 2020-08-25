@@ -119,8 +119,8 @@ class App extends React.Component {
           const prevEnd = utcDiffMoment(this.state.workdayStartMoment, prevItem.utc_hours_diff).add(prevItem.span, 'h')
           const currentStart = utcDiffMoment(this.state.workdayStartMoment, user.utc_hours_diff)
           const hourDiff = prevEnd.diff(currentStart, 'hours')
-          if (hourDiff > 0) {
-            acc[acc.length-1].span = (acc[acc.length-1].span + workdayHours) - hourDiff
+          if (hourDiff > -1) {
+            prevItem.span = (prevItem.span + workdayHours) - hourDiff
             return acc
           }
           acc.push(item)
