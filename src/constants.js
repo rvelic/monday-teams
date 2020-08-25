@@ -12,3 +12,4 @@ export const NUM_OF_HOURS = NUM_OF_WEEKS * HOURS_PER_WEEK
 export const NUM_OF_DAYS = NUM_OF_WEEKS * DAYS_PER_WEEK
 export const MIN_ZOOM = 100
 export const MAX_ZOOM = 2000
+export const MONDAY_COLORS = ['00C875', '4ECCC6', 'FAA1F1', '66CCFF', 'FFCB00', '579BFC', '68A1BD', 'FF7575']

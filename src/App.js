@@ -4,9 +4,9 @@ import moment from 'moment'
 import Timeline from 'react-timelines'
 import "./App.css"
 import 'react-timelines/lib/css/style.css'
-import { NOW, NOW_UTC_HOURS_DIFF, START_DATE, END_DATE, MIN_ZOOM, MAX_ZOOM } from './constants'
+import { NOW, NOW_UTC_HOURS_DIFF, START_DATE, END_DATE, MIN_ZOOM, MAX_ZOOM, MONDAY_COLORS } from './constants'
 import { buildTimebar, buildTrack, buildSubtrack, buildElements } from './builders'
-import { nextColor } from './utils'
+import { randomIndex, randomItem, nextItem, nextIndex } from './utils'
 
 const monday = mondaySdk()
 const timebar = buildTimebar()
@@ -24,7 +24,7 @@ class App extends React.Component {
 
     // Default state
     this.state = {
-      settings: {}, // {teamsColumn, activeTeamColumn, ownerColumn, workdayStart, workdayHours}
+      settings: {}, // {teamsColumn, ownerTeamColumn, ownerColumn, workdayStart, workdayHours}
       workdayStartMoment: null,
       context: {},
       itemIds: [],
@@ -102,12 +102,14 @@ class App extends React.Component {
   }
 
   fillTracksWithTeams() {
+    let colorIdx = -1
     this.setState({tracks: this.state.teams
       .map(team => {
         const uts = userTimespan(team.users)
         const span = (uts.end - uts.start) + parseInt(this.state.settings.workdayHours)
-        const color = nextColor()
-        const track = buildTrack(team.id, team.name);
+        const color = nextItem(MONDAY_COLORS, colorIdx)
+        colorIdx = nextIndex(MONDAY_COLORS, colorIdx)
+        const track = buildTrack(team.id, team.name)
         track.tracks = team.users.map(user => this.fillSubTracksWithUsers(team.id, user.id, user.name, user.utc_hours_diff, color));
         track.elements = buildElements(
           team.id,
@@ -144,7 +146,7 @@ class App extends React.Component {
       }]
     }))
     const board_id = parseInt(this.state.context.boardId)
-    const column_id = Object.keys(this.state.settings.activeTeamColumn).shift()
+    const column_id = Object.keys(this.state.settings.ownerTeamColumn).shift()
 
     return Promise.all(this.state.itemIds.map(id => monday.api(`mutation {
       change_column_value(
@@ -158,19 +160,71 @@ class App extends React.Component {
     }`)))
   }
 
+  activateOwner = (teamId) => {
+    const users = this.state.teams
+      .filter(team => team.id === teamId)
+      .shift().users
+    
+    let userIdx = randomIndex(users)    
+    const board_id = parseInt(this.state.context.boardId)
+    const column_id = Object.keys(this.state.settings.ownerColumn).shift()
+
+    return Promise.all(this.state.itemIds.map(id => {
+      const user = nextItem(users, userIdx)
+      userIdx = nextIndex(users, userIdx)
+      // We need to run JSON.stringify 2x to get correct format
+      const value = JSON.stringify(JSON.stringify({
+        "personsAndTeams": [{
+          "id": parseInt(user.id),
+          "kind": "person"
+        }]
+      }))
+      return monday.api(`mutation {
+        change_column_value(
+          board_id: ${board_id},
+          item_id: ${id},
+          column_id: "${column_id}",
+          value: ${value}
+        ){
+          id
+        }
+      }`)
+    }))
+  }
+
   handleClickElement = (element) => {
     return element.kind !== 'team' ? null : monday.execute('confirm', {
-        message: `<p><strong>Activate workday of ${element.title} team?</strong></p>
-                  <p>This will set ${element.title} as the "Active Team" on all displayed items.</p>`,
-        confirmButton: 'Activate',
+        message: `<p><strong>Assign ${element.title} team?</strong></p>
+                  <p>This will set ${element.title} as the "Owner Team" on all displayed items.</p>`,
+        confirmButton: 'Assign',
         cancelButton: 'Cancel'
     }).then((res) => {
-      return !res.data.confirm ? null : this.activateTeam(element.trackId)
+      if (res.data.confirm) return this.activateTeam(element.trackId)
     }).then((res) => {
-      return !res ? null : monday.execute('notice', {
-        message: `${res.length} items updated.`,
-        type: 'success'
-      })
+      if (res) {
+        monday.execute('notice', {
+          message: `${res.length} item(s) updated.`,
+          type: 'success'
+        })
+      }
+      const column_id = Object.keys(this.state.settings.ownerColumn).shift()
+      if (res && column_id) {
+        return monday.execute('confirm', {
+          message: `<p><strong>Assign a random user from ${element.title} team?</strong></p>
+                    <p>This will set a random user from ${element.title} team as the "Owner" on all displayed items.</p>`,
+          confirmButton: 'Assign',
+          cancelButton: 'Don\'t assign'
+        })
+      }
+    }).then((res) => {
+      if (res && res.data.confirm) return this.activateOwner(element.trackId)
+    }).then((res) => {
+      if (res) {
+        monday.execute('notice', {
+          message: `${res.length} item(s) updated.`,
+          type: 'success'
+        })
+      }
     })
   }
 

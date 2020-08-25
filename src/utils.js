@@ -8,14 +8,20 @@ export const fill = n => {
   return arr
 }
 
-const COLORS = ['00C875', '4ECCC6', 'FAA1F1', '66CCFF', 'FFCB00', '579BFC', '68A1BD', 'FF7575']
+export const randomIndex = (items) => {
+  return Math.floor(Math.random() * items.length)
+}
 
-export const randomColor = () => COLORS[Math.floor(Math.random() * COLORS.length)]
+export const randomItem = (items) => {
+  return items[randomIndex(items)]
+}
 
-let color = -1
-export const nextColor = () => {
-  color = (color + 1) % COLORS.length
-  return COLORS[color]
+export const nextIndex = (items, start = -1) => {
+  return (start + 1) % items.length
+}
+
+export const nextItem = (items, start = -1) => {
+  return items[nextIndex(items, start)]
 }
 
 export const hexToRgb = hex => {
