@@ -6,7 +6,7 @@ import "./App.css"
 import 'react-timelines/lib/css/style.css'
 import { NOW, NOW_UTC_HOURS_DIFF, START_DATE, END_DATE, MIN_ZOOM, MAX_ZOOM, MONDAY_COLORS } from './constants'
 import { buildTimebar, buildTrack, buildSubtrack, buildElements } from './builders'
-import { randomIndex, randomItem, nextItem, nextIndex } from './utils'
+import { randomIndex, nextItem, nextIndex } from './utils'
 
 const monday = mondaySdk()
 const timebar = buildTimebar()
@@ -40,64 +40,69 @@ class App extends React.Component {
 
   componentDidMount() {
     monday.listen('settings', (res) => {
-      this.setState({settings: res.data});
+      this.setState({settings: res.data})
       this.setState({workdayStartMoment: NOW.clone().hours(res.data.workdayStart)})
+      // re-create timeline when settings change
+      if (this.state.itemIds.length > 0) this.createTimeline()
     })
 
     monday.listen('context', (res) => {
-      this.setState({context: res.data});
+      this.setState({context: res.data})
     })
 
     monday.listen('itemIds', (res) => {
-      this.setState({itemIds: res.data});
+      this.setState({itemIds: res.data})
+      this.createTimeline()
+    })
+  }
 
-      if (!this.state.settings.teamsColumn) {
-        console.log('TeamsColumn is not set!')
-        // TODO: add validation
-      }
-      const teamsColumn = Object.keys(this.state.settings.teamsColumn).shift();
+  createTimeline() {    
+    if (!this.state.settings.teamsColumn) {
+      console.log('TeamsColumn is not set!')
+      // TODO: add validation
+    }
+    const teamsColumn = Object.keys(this.state.settings.teamsColumn).shift();
 
-      monday.api(`query {      
-        boards(ids:[${this.state.context.boardId}]) {
+    monday.api(`query {      
+      boards(ids:[${this.state.context.boardId}]) {
+        name
+        items(ids:[${this.state.itemIds}]) {
           name
-          items(ids:[${this.state.itemIds}]) {
-            name
-            column_values(ids:[${teamsColumn}]) {
-              id
-              value
-            }
+          column_values(ids:[${teamsColumn}]) {
+            id
+            value
           }
         }
-      }`).then((res) => {
-        this.setState({items: res.data.boards[0].items});
-        this.setState({teamIds: this.state.items.reduce((teamIds, item) => {
-          item.column_values
-            .filter(col => col.id === teamsColumn && col.value)
-            .map(col => {
-              JSON.parse(col.value).personsAndTeams
-              .forEach(personOrTeam => {
-                if (personOrTeam.kind === 'team' && !teamIds.includes(personOrTeam.id))
-                  teamIds.push(personOrTeam.id);
-              })
+      }
+    }`).then((res) => {
+      this.setState({items: res.data.boards[0].items});
+      this.setState({teamIds: this.state.items.reduce((teamIds, item) => {
+        item.column_values
+          .filter(col => col.id === teamsColumn && col.value)
+          .map(col => {
+            JSON.parse(col.value).personsAndTeams
+            .forEach(personOrTeam => {
+              if (personOrTeam.kind === 'team' && !teamIds.includes(personOrTeam.id))
+                teamIds.push(personOrTeam.id);
             })
-          return teamIds;
-        }, [])});
-        // clear tracks if no teamIds are found in items
-        return this.state.teamIds.length < 1 ? null : monday.api(`query {
-          teams(ids:[${this.state.teamIds}]) {
+          })
+        return teamIds;
+      }, [])});
+      // clear tracks if no teamIds are found in items
+      return this.state.teamIds.length < 1 ? null : monday.api(`query {
+        teams(ids:[${this.state.teamIds}]) {
+          id
+          name
+          users {
             id
             name
-            users {
-              id
-              name
-              utc_hours_diff
-            }
+            utc_hours_diff
           }
-        }`);
-      }).then((res) => {
-        this.setState({teams: res ? res.data.teams : []});
-        this.fillTracksWithTeams();
-      })
+        }
+      }`);
+    }).then((res) => {
+      this.setState({teams: res ? res.data.teams : []});
+      this.fillTracksWithTeams();
     })
   }
 
