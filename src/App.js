@@ -101,34 +101,27 @@ class App extends React.Component {
 
   fillTracksWithTeams() {
     let colorIdx = -1
-    const workdayHours = this.state.settings.workdayHours
+    const workdayHours = parseInt(this.state.settings.workdayHours)
     this.setState({tracks: this.state.teams
       .map(team => {
         const color = nextItem(MONDAY_COLORS, colorIdx)
         colorIdx = nextIndex(MONDAY_COLORS, colorIdx)
         const track = buildTrack(team.id, team.name)
-        let isNextConsumed = false
         track.tracks = team.users.map(user => this.fillSubTracksWithUsers(team.id, user.id, user.name, user.utc_hours_diff, color));
-        const elements = team.users.reduce((acc, user, i, users) => {
+        const elements = team.users.sort(byUtcDiff).reduce((acc, user, i, users) => {
           const currentDiff = user.utc_hours_diff
           const item = {utc_hours_diff: currentDiff, span: workdayHours}
-          if (isNextConsumed) {
-            isNextConsumed = false
-            return acc
-          } else if (i === users.length - 1) {
+          if (acc.length < 1) {
             acc.push(item)
             return acc
           }
-          const nextDiff = users[i+1].utc_hours_diff
-          const isCurrentFirst = currentDiff > nextDiff
-          const current = utcDiffMoment(this.state.workdayStartMoment, currentDiff)
-          const next = utcDiffMoment(this.state.workdayStartMoment, nextDiff)
-          const end = isCurrentFirst ? current.clone().add(workdayHours, 'h') : next.clone().add(workdayHours, 'h')
-          const hourDiff = isCurrentFirst ? end.diff(next, 'hours') : end.diff(current, 'hours')
-          if (hourDiff > -1) {
-            item.utc_hours_diff = isCurrentFirst ? currentDiff : nextDiff
-            item.span = (workdayHours * 2) - hourDiff
-            isNextConsumed = true
+          const prevItem = acc[acc.length-1]
+          const prevEnd = utcDiffMoment(this.state.workdayStartMoment, prevItem.utc_hours_diff).add(prevItem.span, 'h')
+          const currentStart = utcDiffMoment(this.state.workdayStartMoment, user.utc_hours_diff)
+          const hourDiff = prevEnd.diff(currentStart, 'hours')
+          if (hourDiff > 0) {
+            acc[acc.length-1].span = (acc[acc.length-1].span + workdayHours) - hourDiff
+            return acc
           }
           acc.push(item)
           return acc
@@ -303,6 +296,10 @@ class App extends React.Component {
 const utcDiffMoment = (startMoment, utcHoursDiff) => {
   return moment.utc(startMoment)
     .add(NOW_UTC_HOURS_DIFF - utcHoursDiff, 'h')
+}
+
+const byUtcDiff = (a, b) => {
+  return b.utc_hours_diff - a.utc_hours_diff
 }
 
 export default App;
