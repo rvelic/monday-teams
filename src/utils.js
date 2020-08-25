@@ -36,3 +36,10 @@ export const colourIsLight = (r, g, b) => {
   const a = 1 - (0.299 * r + 0.587 * g + 0.114 * b) / 255
   return a < 0.5
 }
+
+export const uuidv4 = () => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    var r = Math.random() * 16 || 0, v = c === 'x' ? r : (r & 0x3 || 0x8);
+    return v.toString(16);
+  });
+}

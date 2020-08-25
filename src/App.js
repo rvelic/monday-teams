@@ -11,13 +11,6 @@ import { randomIndex, nextItem, nextIndex } from './utils'
 const monday = mondaySdk()
 const timebar = buildTimebar()
 
-const userTimespan = (users) => users
-  .reduce((acc, user) => {
-    if (!acc.start || user.utc_hours_diff < acc.start) acc.start = user.utc_hours_diff
-    if (!acc.end || user.utc_hours_diff > acc.end) acc.end = user.utc_hours_diff
-    return acc
-  }, {start: null, end: null})
-
 class App extends React.Component {
   constructor(props) {
     super(props);
@@ -108,22 +101,46 @@ class App extends React.Component {
 
   fillTracksWithTeams() {
     let colorIdx = -1
+    const workdayHours = this.state.settings.workdayHours
     this.setState({tracks: this.state.teams
       .map(team => {
-        const uts = userTimespan(team.users)
-        const span = (uts.end - uts.start) + parseInt(this.state.settings.workdayHours)
         const color = nextItem(MONDAY_COLORS, colorIdx)
         colorIdx = nextIndex(MONDAY_COLORS, colorIdx)
         const track = buildTrack(team.id, team.name)
+        let isNextConsumed = false
         track.tracks = team.users.map(user => this.fillSubTracksWithUsers(team.id, user.id, user.name, user.utc_hours_diff, color));
-        track.elements = buildElements(
+        const elements = team.users.reduce((acc, user, i, users) => {
+          const currentDiff = user.utc_hours_diff
+          const item = {utc_hours_diff: currentDiff, span: workdayHours}
+          if (isNextConsumed) {
+            isNextConsumed = false
+            return acc
+          } else if (i === users.length - 1) {
+            acc.push(item)
+            return acc
+          }
+          const nextDiff = users[i+1].utc_hours_diff
+          const isCurrentFirst = currentDiff > nextDiff
+          const current = utcDiffMoment(this.state.workdayStartMoment, currentDiff)
+          const next = utcDiffMoment(this.state.workdayStartMoment, nextDiff)
+          const end = isCurrentFirst ? current.clone().add(workdayHours, 'h') : next.clone().add(workdayHours, 'h')
+          const hourDiff = isCurrentFirst ? end.diff(next, 'hours') : end.diff(current, 'hours')
+          if (hourDiff > -1) {
+            item.utc_hours_diff = isCurrentFirst ? currentDiff : nextDiff
+            item.span = (workdayHours * 2) - hourDiff
+            isNextConsumed = true
+          }
+          acc.push(item)
+          return acc
+        }, [])
+        track.elements = elements.map(element => buildElements(
           team.id,
           team.name,
-          moment.utc(this.state.workdayStartMoment).add(NOW_UTC_HOURS_DIFF - uts.end, 'h'),
-          span,
+          utcDiffMoment(this.state.workdayStartMoment, element.utc_hours_diff),
+          element.span,
           'team',
           color
-        )
+        )).flat()
         return track;
       })
     });
@@ -134,7 +151,7 @@ class App extends React.Component {
     track.elements = buildElements(
       teamId,
       userName,
-      moment.utc(this.state.workdayStartMoment).add(NOW_UTC_HOURS_DIFF - utcDiff, 'h'),
+      utcDiffMoment(this.state.workdayStartMoment, utcDiff),
       this.state.settings.workdayHours,
       'user',
       color
@@ -281,6 +298,11 @@ class App extends React.Component {
       </div>
     )
   }
+}
+
+const utcDiffMoment = (startMoment, utcHoursDiff) => {
+  return moment.utc(startMoment)
+    .add(NOW_UTC_HOURS_DIFF - utcHoursDiff, 'h')
 }
 
 export default App;

@@ -6,7 +6,7 @@ import {
   NUM_OF_DAYS
 } from './constants'
 
-import { hexToRgb, colourIsLight } from './utils'
+import { hexToRgb, colourIsLight, uuidv4 } from './utils'
 
 export const buildDayCells = () => {
   const m = START_DATE.clone()
@@ -64,7 +64,7 @@ export const buildElements = (trackId, trackName, start, span, kind, bgColor) =>
     const s = m.startOf('hour')
     const e = m.clone().add(span, 'h')
     const element = {
-      id: `t-${trackId}-el-${i}`,
+      id: `t-${trackId}-el-${i}-${uuidv4()}`,
       trackId,
       title: trackName,
       kind, // 'team' or 'user'
