@@ -13,8 +13,7 @@ const timebar = buildTimebar()
 
 class App extends React.Component {
   constructor(props) {
-    super(props);
-
+    super(props)
     // Default state
     this.state = {
       settings: {}, // {teamsColumn, ownerTeamColumn, ownerColumn, workdayStart, workdayHours}
@@ -28,7 +27,7 @@ class App extends React.Component {
       open: false,
       zoom: 1800,
       tracks: []
-    };
+    }
   }
 
   componentDidMount() {
@@ -50,12 +49,8 @@ class App extends React.Component {
   }
 
   createTimeline() {    
-    if (!this.state.settings.teamsColumn) {
-      console.log('TeamsColumn is not set!')
-      // TODO: add validation
-    }
-    const teamsColumn = Object.keys(this.state.settings.teamsColumn).shift();
-
+    if (!this.state.settings.teamsColumn) return
+    const teamsColumn = Object.keys(this.state.settings.teamsColumn).shift()
     monday.api(`query {      
       boards(ids:[${this.state.context.boardId}]) {
         name
@@ -68,19 +63,15 @@ class App extends React.Component {
         }
       }
     }`).then((res) => {
-      this.setState({items: res.data.boards[0].items});
-      this.setState({teamIds: this.state.items.reduce((teamIds, item) => {
-        item.column_values
-          .filter(col => col.id === teamsColumn && col.value)
-          .map(col => {
-            JSON.parse(col.value).personsAndTeams
-            .forEach(personOrTeam => {
-              if (personOrTeam.kind === 'team' && !teamIds.includes(personOrTeam.id))
-                teamIds.push(personOrTeam.id);
-            })
-          })
-        return teamIds;
-      }, [])});
+      this.setState({items: res.data.boards[0].items})
+      this.setState({teamIds: this.state.items.reduce((acc, item) => {
+        acc.push(item.column_values.filter(col => col.id === teamsColumn && col.value)
+            .map(col => JSON.parse(col.value).personsAndTeams
+              .filter(personOrTeam => personOrTeam.kind === 'team' && !acc.includes(personOrTeam.id))
+              .map(personOrTeam => personOrTeam.id)
+            ).flat())
+        return acc
+      }, []).flat()})
       // clear tracks if no teamIds are found in items
       return this.state.teamIds.length < 1 ? null : monday.api(`query {
         teams(ids:[${this.state.teamIds}]) {
@@ -92,10 +83,10 @@ class App extends React.Component {
             utc_hours_diff
           }
         }
-      }`);
+      }`)
     }).then((res) => {
-      this.setState({teams: res ? res.data.teams : []});
-      this.fillTracksWithTeams();
+      this.setState({teams: res ? res.data.teams : []})
+      this.fillTracksWithTeams()
     })
   }
 
@@ -107,7 +98,7 @@ class App extends React.Component {
         const color = nextItem(MONDAY_COLORS, colorIdx)
         colorIdx = nextIndex(MONDAY_COLORS, colorIdx)
         const track = buildTrack(team.id, team.name)
-        track.tracks = team.users.map(user => this.fillSubTracksWithUsers(team.id, user.id, user.name, user.utc_hours_diff, color));
+        track.tracks = team.users.map(user => this.fillSubTracksWithUsers(team.id, user.id, user.name, user.utc_hours_diff, color))
         const elements = team.users.sort(byUtcDiff).reduce((acc, user, i, users) => {
           const currentDiff = user.utc_hours_diff
           const item = {utc_hours_diff: currentDiff, span: workdayHours}
@@ -119,6 +110,7 @@ class App extends React.Component {
           const prevEnd = utcDiffMoment(this.state.workdayStartMoment, prevItem.utc_hours_diff).add(prevItem.span, 'h')
           const currentStart = utcDiffMoment(this.state.workdayStartMoment, user.utc_hours_diff)
           const hourDiff = prevEnd.diff(currentStart, 'hours')
+          // If prev and current are bordering or overlapping, merge them
           if (hourDiff > -1) {
             prevItem.span = (prevItem.span + workdayHours) - hourDiff
             return acc
@@ -134,9 +126,9 @@ class App extends React.Component {
           'team',
           color
         )).flat()
-        return track;
+        return track
       })
-    });
+    })
   }
 
   fillSubTracksWithUsers = (teamId, userId, userName, utcDiff, color) => {
@@ -149,7 +141,7 @@ class App extends React.Component {
       'user',
       color
     )
-    return track;
+    return track
   }
 
   activateTeam = (teamId) => {
@@ -162,7 +154,6 @@ class App extends React.Component {
     }))
     const board_id = parseInt(this.state.context.boardId)
     const column_id = Object.keys(this.state.settings.ownerTeamColumn).shift()
-
     return Promise.all(this.state.itemIds.map(id => monday.api(`mutation {
       change_column_value(
         board_id: ${board_id},
@@ -179,11 +170,9 @@ class App extends React.Component {
     const users = this.state.teams
       .filter(team => team.id === teamId)
       .shift().users
-    
     let userIdx = randomIndex(users)    
     const board_id = parseInt(this.state.context.boardId)
     const column_id = Object.keys(this.state.settings.ownerColumn).shift()
-
     return Promise.all(this.state.itemIds.map(id => {
       const user = nextItem(users, userIdx)
       userIdx = nextIndex(users, userIdx)
@@ -258,10 +247,10 @@ class App extends React.Component {
   handleToggleTrackOpen = track => {
     this.setState({tracks: this.state.tracks
       .map(t => {
-        if (track.id === t.id ) t.isOpen = !t.isOpen;
-        return t;
+        if (track.id === t.id ) t.isOpen = !t.isOpen
+        return t
       })
-    });
+    })
   }
 
   render() {
@@ -302,4 +291,4 @@ const byUtcDiff = (a, b) => {
   return b.utc_hours_diff - a.utc_hours_diff
 }
 
-export default App;
+export default App
