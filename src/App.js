@@ -16,7 +16,7 @@ class App extends React.Component {
     super(props)
     // Default state
     this.state = {
-      settings: {}, // {teamsColumn, ownerTeamColumn, ownerColumn, workdayStart, workdayHours}
+      settings: {},
       workdayStartMoment: null,
       context: {},
       itemIds: [],
@@ -32,8 +32,15 @@ class App extends React.Component {
 
   componentDidMount() {
     monday.listen('settings', (res) => {
-      this.setState({settings: res.data})
-      this.setState({workdayStartMoment: NOW.clone().hours(res.data.workdayStart)})
+      const settings = {
+        teamsColumn: res.data.teamsColumn,
+        ownerColumn: res.data.ownerColumn,
+        ownerTeamColumn: res.data.ownerTeamColumn,
+        workdayStart: res.data.workdayStart || '9',
+        workdayHours: res.data.workdayHours || '8'
+      }
+      this.setState({settings})
+      this.setState({workdayStartMoment: NOW.clone().hours(settings.workdayStart)})
       // re-create timeline when settings change
       if (this.state.itemIds.length > 0) this.createTimeline()
     })
@@ -48,32 +55,35 @@ class App extends React.Component {
     })
   }
 
-  createTimeline() {    
-    if (!this.state.settings.teamsColumn) return
-    const teamsColumn = Object.keys(this.state.settings.teamsColumn).shift()
+  createTimeline() {
     monday.api(`query {      
       boards(ids:[${this.state.context.boardId}]) {
         name
         items(ids:[${this.state.itemIds}]) {
           name
-          column_values(ids:[${teamsColumn}]) {
+          column_values() {
             id
             value
           }
         }
       }
-    }`).then((res) => {
-      this.setState({items: res.data.boards[0].items})
-      this.setState({teamIds: this.state.items.reduce((acc, item) => {
-        acc.push(item.column_values.filter(col => col.id === teamsColumn && col.value)
-            .map(col => JSON.parse(col.value).personsAndTeams
-              .filter(personOrTeam => personOrTeam.kind === 'team' && !acc.includes(personOrTeam.id))
-              .map(personOrTeam => personOrTeam.id)
-            ).flat())
-        return acc
-      }, []).flat()})
-      // clear tracks if no teamIds are found in items
-      return this.state.teamIds.length < 1 ? null : monday.api(`query {
+    }`)
+    .then(res => {
+      this.setState({items: res.data.boards.shift().items})
+      const teamsColumn = Object.keys(this.state.settings.teamsColumn).shift()
+      // If there is teamsColumn defined, get only teams used within items
+      // if there is no teamsColumn defined, get all the teams
+      if (teamsColumn) {
+        this.setState({teamIds: this.state.items.reduce((acc, item) => {
+          acc.push(item.column_values.filter(col => col.id === teamsColumn && col.value)
+              .map(col => JSON.parse(col.value).personsAndTeams
+                .filter(personOrTeam => personOrTeam.kind === 'team' && !acc.includes(personOrTeam.id))
+                .map(personOrTeam => personOrTeam.id)
+              ).flat())
+          return acc
+        }, []).flat()})
+      }
+      return monday.api(`query {
         teams(ids:[${this.state.teamIds}]) {
           id
           name
@@ -84,8 +94,9 @@ class App extends React.Component {
           }
         }
       }`)
-    }).then((res) => {
-      this.setState({teams: res ? res.data.teams : []})
+    })
+    .then(res => {
+      if (res.data.teams) this.setState({teams: res.data.teams})
       this.fillTracksWithTeams()
     })
   }
@@ -197,40 +208,49 @@ class App extends React.Component {
   }
 
   handleClickElement = (element) => {
-    return element.kind !== 'team' ? null : monday.execute('confirm', {
-        message: `<p><strong>Assign ${element.title} team?</strong></p>
-                  <p>This will set ${element.title} as the "Owner Team" on all displayed items.</p>`,
-        confirmButton: 'Assign',
-        cancelButton: 'Cancel'
-    }).then((res) => {
-      if (res.data.confirm) return this.activateTeam(element.trackId)
-    }).then((res) => {
-      if (res) {
-        monday.execute('notice', {
-          message: `${res.length} item(s) updated.`,
-          type: 'success'
-        })
-      }
-      const column_id = Object.keys(this.state.settings.ownerColumn).shift()
-      if (res && column_id) {
-        return monday.execute('confirm', {
-          message: `<p><strong>Assign a random user from ${element.title} team?</strong></p>
-                    <p>This will set a random user from ${element.title} team as the "Owner" on all displayed items.</p>`,
-          confirmButton: 'Assign',
-          cancelButton: 'Don\'t assign'
-        })
-      }
-    }).then((res) => {
-      if (res && res.data.confirm) return this.activateOwner(element.trackId)
-    }).then((res) => {
-      if (res) {
-        monday.execute('notice', {
-          message: `${res.length} item(s) updated.`,
-          type: 'success'
-        })
-      }
-    })
+    const ownerTeamColumn = Object.keys(this.state.settings.ownerTeamColumn).shift()
+    const ownerColumn = Object.keys(this.state.settings.ownerColumn).shift()
+    Promise.resolve().then(res => {
+      // Actions are restricted to settings set by user
+      // - If there is no ownerTeam set, nothing will happen on click
+      // - If there is no owner set, user won't be asked to assing random user
+      if (element.kind !== 'team') return Promise.reject()
+      if (ownerTeamColumn) return this.executeActivateOwnerTeamConfirm(element)
+      if (ownerColumn) return this.executeActivateOwnerConfirm(element)
+    }).then(res => {
+      if (!res.data.confirm) return Promise.reject()
+      if (ownerTeamColumn) return this.activateTeam(element.trackId)
+      if (ownerColumn) return this.activateOwner(element.trackId)
+    }).then(res => {
+      if (!res) return Promise.reject()
+      this.executeItemsUpdatedNotice(res.length)
+      if (ownerTeamColumn && ownerColumn) return this.executeActivateOwnerConfirm(element)
+    }).then(res => {
+      if (!res) return Promise.reject()
+      if (res.data.confirm) return this.activateOwner(element.trackId)
+    }).then(res => {
+      if (res) this.executeItemsUpdatedNotice(res.length)
+    }).catch(()=>{})
   }
+
+  executeActivateOwnerTeamConfirm = (element) => monday.execute('confirm', {
+    message: `<p><strong>Assign ${element.title} team?</strong></p>
+              <p>This will set ${element.title} as the "Owner Team" on all displayed items.</p>`,
+    confirmButton: 'Assign',
+    cancelButton: 'Cancel'
+  })
+
+  executeActivateOwnerConfirm = (element) => monday.execute('confirm', {
+    message: `<p><strong>Assign a random user from ${element.title} team?</strong></p>
+              <p>This will set a random user from ${element.title} team as the "Owner" on all displayed items.</p>`,
+    confirmButton: 'Assign',
+    cancelButton: 'Don\'t assign'
+  })
+
+  executeItemsUpdatedNotice = (count) => monday.execute('notice', {
+    message: `${count} item(s) updated.`,
+    type: 'success'
+  })
 
   handleToggleOpen = () => {
     this.setState(({ open }) => ({ open: !open }))
