@@ -3,7 +3,7 @@ body {
   font-family: "Roboto", sans-serif;
 }
 
-.App {
+.loading {
   height: 100vh;
   width: 100vw;
   display: flex;

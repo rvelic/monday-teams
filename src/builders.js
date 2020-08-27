@@ -100,3 +100,29 @@ export const buildTrack = (trackId, trackName) => ({
   // link: 'www.google.com',
   isOpen: false
 })
+
+export const buildTeamTree = (users, teams) => {
+  let tree = {}
+  teams.forEach(team => {
+    tree[team.id] = team.users.map(user => user.id)
+  })
+  users.forEach(user => {
+    user.teams.forEach(team => {
+      if (!tree[team.id]) tree[team.id] = []
+      if (!tree[team.id].includes(user.id)) tree[team.id].push(user.id)
+    })
+  })
+  return tree
+}
+
+export const buildChartStats = (logs, users, teams) => {
+  const tree = buildTeamTree(users, teams)
+  return [
+    { name: 'own-solved', value: 100, fill: '#00C875' },
+    { name: 'own-unsolved', value: 2, fill: '#FFADAD' },
+    { name: 'inherited-solved', value: 20, fill: '#4ECCC6' },
+    { name: 'inherited-unsolved', value: 40, fill: '#FFCB00' },
+    { name: 'changes', value: 60, fill: '#784BD1' },
+    { name: 'activity', value: 30, fill: '#401694' }
+  ]
+}

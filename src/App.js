@@ -2,10 +2,11 @@ import React from "react"
 import mondaySdk from "monday-sdk-js"
 import moment from 'moment'
 import Timeline from 'react-timelines'
+import { RadialBarChart, RadialBar, Cell, Legend, Tooltip, ResponsiveContainer, LabelList, PolarAngleAxis } from 'recharts';
 import "./App.css"
 import 'react-timelines/lib/css/style.css'
 import { NOW, NOW_UTC_HOURS_DIFF, START_DATE, END_DATE, MIN_ZOOM, MAX_ZOOM, MONDAY_COLORS } from './constants'
-import { buildTimebar, buildTrack, buildSubtrack, buildElements } from './builders'
+import { buildTimebar, buildTrack, buildSubtrack, buildElements, buildChartStats } from './builders'
 import { randomIndex, nextItem, nextIndex } from './utils'
 
 const monday = mondaySdk()
@@ -16,42 +17,113 @@ class App extends React.Component {
     super(props)
     // Default state
     this.state = {
+      // common
       settings: {},
-      workdayStartMoment: null,
       context: {},
+      // board view
+      workdayStartMoment: null,
       itemIds: [],
       items: [],
-      teamIds: [],
-      teams: [],
       name: "",
       open: false,
       zoom: 1800,
-      tracks: []
+      tracks: [],
+      teamIds: [],
+      teams: [],
+      // dashboard widget
+      stats: []
     }
   }
 
   componentDidMount() {
     monday.listen('settings', (res) => {
       const settings = {
+        // board view
         teamsColumn: res.data.teamsColumn,
         ownerColumn: res.data.ownerColumn,
         ownerTeamColumn: res.data.ownerTeamColumn,
         workdayStart: res.data.workdayStart || '9',
-        workdayHours: res.data.workdayHours || '8'
+        // dashboard widget
+        workdayHours: res.data.workdayHours || '8',
+        durationDays: res.data.durationDays || '7'
       }
       this.setState({settings})
       this.setState({workdayStartMoment: NOW.clone().hours(settings.workdayStart)})
       // re-create timeline when settings change
-      if (this.state.itemIds.length > 0) this.createTimeline()
+      if (this.state.itemIds.length > 0 && this.isBoardView()) this.createTimeline()
     })
 
     monday.listen('context', (res) => {
       this.setState({context: res.data})
+      if (this.isDashboardWidget()) this.createChart()
     })
 
     monday.listen('itemIds', (res) => {
       this.setState({itemIds: res.data})
-      this.createTimeline()
+      if (this.isBoardView()) this.createTimeline()
+    })
+  }
+
+  createChart() {
+    let logs = []
+    const from = NOW.clone()
+      .subtract(this.state.settings.durationDays, 'd')
+      .format('YYYY-MM-DD')
+    const to = NOW.format('YYYY-MM-DD')
+    monday.api(`query {      
+      boards(ids:[${this.state.context.boardIds}]) {
+        activity_logs(from:"${from}", to:"${to}") {
+          id
+          event
+          data
+          user_id
+          entity
+        }
+      }
+    }`)
+    .then(res => {
+      // Filter activities only including column updates of people/team types
+      // where only 1 value exists as the action is uncertain otherwise
+      // TODO: calculate total activity per team
+      logs = res.data.boards
+        .map(board => board.activity_logs
+          .filter(log => log.entity === 'pulse' && log.event === 'update_column_value')
+          .map(log => ({data: JSON.parse(log.data), userId: log.user_id}))
+          .filter(log => (
+            log.data.value && 
+            log.data.value.personsAndTeams &&
+            log.data.value.personsAndTeams.length < 2
+            ) || (
+            log.data.previousValue &&
+            log.data.previousValue.personsAndTeams &&
+            log.data.previousValue.personsAndTeams.length < 2))
+          .flat()
+      ).flat()
+      const teamIds = logs.reduce(reduceActivityLogsByTeamKind, [])
+      const userIds = logs.reduce(reduceActivityLogsByPersonKind, [])
+      return monday.api(`query {      
+        teams(ids:[${teamIds}]) {
+          id
+          name
+          users() {
+            id
+            name
+          }
+        }
+        users(ids:[${userIds}]) {
+          id
+          name
+          teams() {
+            id
+            name
+          }
+        }
+      }`)
+    })
+    .then(res => {
+      this.setState({
+        stats: buildChartStats(logs, res.data.users, res.data.teams)
+      })
     })
   }
 
@@ -77,8 +149,8 @@ class App extends React.Component {
         this.setState({teamIds: this.state.items.reduce((acc, item) => {
           acc.push(item.column_values.filter(col => col.id === teamsColumn && col.value)
               .map(col => JSON.parse(col.value).personsAndTeams
-                .filter(personOrTeam => personOrTeam.kind === 'team' && !acc.includes(personOrTeam.id))
-                .map(personOrTeam => personOrTeam.id)
+                .filter(pot => pot.kind === 'team' && !acc.includes(pot.id))
+                .map(pot => pot.id)
               ).flat())
           return acc
         }, []).flat()})
@@ -110,7 +182,7 @@ class App extends React.Component {
         colorIdx = nextIndex(MONDAY_COLORS, colorIdx)
         const track = buildTrack(team.id, team.name)
         track.tracks = team.users.map(user => this.fillSubTracksWithUsers(team.id, user.id, user.name, user.utc_hours_diff, color))
-        const elements = team.users.sort(byUtcDiff).reduce((acc, user, i, users) => {
+        const elements = team.users.sort(sortByUtcDiff).reduce((acc, user, i, users) => {
           const currentDiff = user.utc_hours_diff
           const item = {utc_hours_diff: currentDiff, span: workdayHours}
           if (acc.length < 1) {
@@ -273,7 +345,7 @@ class App extends React.Component {
     })
   }
 
-  render() {
+  renderBoardView() {
     const { open, zoom, tracks } = this.state
     return (
       <div className="app">
@@ -300,6 +372,38 @@ class App extends React.Component {
       </div>
     )
   }
+
+  renderDashboardWidget() {
+    return (
+      <div className='radial-bar-charts'>     
+        <p>Team X</p>
+        <div className="radial-bar-chart-wrapper">
+          <RadialBarChart
+            width={300}
+            height={300}
+            barCategoryGap={'5%'}
+            data={this.state.stats}
+            startAngle={180}
+            endAngle={-180}
+          >
+            <RadialBar background dataKey="value">
+              <LabelList position="end" />
+            </RadialBar>
+            <Tooltip />
+          </RadialBarChart>
+        </div>
+      </div>
+    )
+  }
+
+  isBoardView = () => this.state.context.instanceType === 'board_view'
+  isDashboardWidget = () => this.state.context.instanceType === 'dashboard_widget'
+
+  render() {
+    if (this.isBoardView()) return this.renderBoardView()
+    if (this.isDashboardWidget()) return this.renderDashboardWidget()
+    return <div className="loading">...</div>
+  }
 }
 
 const utcDiffMoment = (startMoment, utcHoursDiff) => {
@@ -307,8 +411,24 @@ const utcDiffMoment = (startMoment, utcHoursDiff) => {
     .add(NOW_UTC_HOURS_DIFF - utcHoursDiff, 'h')
 }
 
-const byUtcDiff = (a, b) => {
+const sortByUtcDiff = (a, b) => {
   return b.utc_hours_diff - a.utc_hours_diff
+}
+
+const reduceActivityLogsByPersonKind = (acc, log) => {
+  let id = log.data.value.personsAndTeams
+      .filter(pot => pot.kind === 'person' && !acc.includes(pot.id))
+      .map(person => person.id).shift()
+  if (id) acc.push(id)
+  return acc
+}
+
+const reduceActivityLogsByTeamKind = (acc, log) => {
+  let id = log.data.value.personsAndTeams
+      .filter(pot => pot.kind === 'team' && !acc.includes(pot.id))
+      .map(team => team.id).shift()
+  if (id) acc.push(id)
+  return acc
 }
 
 export default App
