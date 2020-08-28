@@ -104,19 +104,60 @@ export const buildTrack = (trackId, trackName) => ({
 export const buildTeamTree = (users, teams) => {
   let tree = {}
   teams.forEach(team => {
-    tree[team.id] = team.users.map(user => user.id)
+    if (!tree[team.id]) tree[team.id] = {handedover: 0, workedon: 0, name: team.name, users: {}}
+    tree[team.id].users = team.users.reduce((acc, user) => {
+      acc[user.id] = {name: user.name, handedover: 0, workedon: 0}
+      return acc
+    }, {})
   })
   users.forEach(user => {
     user.teams.forEach(team => {
-      if (!tree[team.id]) tree[team.id] = []
-      if (!tree[team.id].includes(user.id)) tree[team.id].push(user.id)
+      if (!tree[team.id]) tree[team.id] = {name: team.name, handedover: 0, workedon: 0, users: {}}
+      if (!tree[team.id].users[user.id]) {
+        tree[team.id].users[user.id] = {name: user.name, handedover: 0, workedon: 0}
+      }
     })
   })
   return tree
 }
 
+export const findTeamIds = (tree, userId) => Object.keys(tree)
+  .filter(teamId => Object.keys(tree[teamId].users)
+  .reduce((acc, uid) => {
+    if (acc) return true
+    return userId === parseInt(uid)
+  },false))
+
 export const buildChartStats = (logs, users, teams) => {
   const tree = buildTeamTree(users, teams)
+  logs.forEach(log => {
+    if (log.data.previous_value && log.data.previous_value.personsAndTeams &&
+        log.data.previous_value.personsAndTeams.length > 0) {
+      let pot = log.data.previous_value.personsAndTeams[0]
+      if (pot.kind === 'team') {
+        tree[pot.id].handedover++
+      }
+      if (pot.kind === 'person') {
+        findTeamIds(tree, pot.id).forEach(teamId => {
+          tree[teamId].handedover++
+          tree[teamId].users[pot.id].handedover++
+        })
+      }
+    }
+    if (log.data.value && log.data.value.personsAndTeams &&
+        log.data.value.personsAndTeams.length > 0) {
+      let pot = log.data.value.personsAndTeams[0]
+      if (pot.kind === 'team') {
+        tree[pot.id].workedon++
+      }
+      if (pot.kind === 'person') {
+        findTeamIds(tree, pot.id).forEach(teamId => {
+          tree[teamId].workedon++
+          tree[teamId].users[pot.id].workedon++
+        })
+      }
+    }
+  })
   return [
     { name: 'own-solved', value: 100, fill: '#00C875' },
     { name: 'own-unsolved', value: 2, fill: '#FFADAD' },
@@ -126,3 +167,4 @@ export const buildChartStats = (logs, users, teams) => {
     { name: 'activity', value: 30, fill: '#401694' }
   ]
 }
+
