@@ -104,7 +104,7 @@ export const buildTrack = (trackId, trackName) => ({
 export const buildTeamTree = (users, teams) => {
   let tree = {}
   teams.forEach(team => {
-    if (!tree[team.id]) tree[team.id] = {handedover: 0, workedon: 0, name: team.name, users: {}}
+    if (!tree[team.id]) tree[team.id] = {name: team.name, users: {}, columns: {}}
     tree[team.id].users = team.users.reduce((acc, user) => {
       acc[user.id] = {name: user.name, handedover: 0, workedon: 0}
       return acc
@@ -112,7 +112,7 @@ export const buildTeamTree = (users, teams) => {
   })
   users.forEach(user => {
     user.teams.forEach(team => {
-      if (!tree[team.id]) tree[team.id] = {name: team.name, handedover: 0, workedon: 0, users: {}}
+      if (!tree[team.id]) tree[team.id] = {name: team.name, users: {}, columns: {}}
       if (!tree[team.id].users[user.id]) {
         tree[team.id].users[user.id] = {name: user.name, handedover: 0, workedon: 0}
       }
@@ -128,43 +128,85 @@ export const findTeamIds = (tree, userId) => Object.keys(tree)
     return userId === parseInt(uid)
   },false))
 
-export const buildChartStats = (logs, users, teams) => {
+export const buildChartStats = (logs, users, teams, teamId) => {
   const tree = buildTeamTree(users, teams)
+  const stats = []
+  let topPerformer = {}
+  let bottomPerformer = {}
+  // Perform analytics
   logs.forEach(log => {
+    // previous value (handover)
     if (log.data.previous_value && log.data.previous_value.personsAndTeams &&
         log.data.previous_value.personsAndTeams.length > 0) {
       let pot = log.data.previous_value.personsAndTeams[0]
       if (pot.kind === 'team') {
-        tree[pot.id].handedover++
+        tree[pot.id].columns[log.data.column_id] = initOrReturnColumn(tree[pot.id], log.data.column_id, log.data.column_title)
+        tree[pot.id].columns[log.data.column_id].handedover++
       }
       if (pot.kind === 'person') {
-        findTeamIds(tree, pot.id).forEach(teamId => {
-          tree[teamId].handedover++
-          tree[teamId].users[pot.id].handedover++
+        findTeamIds(tree, pot.id).forEach(tid => {
+          tree[tid].columns[log.data.column_id] = initOrReturnColumn(tree[tid], log.data.column_id, log.data.column_title)
+          tree[tid].columns[log.data.column_id].handedover++
+          tree[tid].users[pot.id].handedover++
         })
       }
     }
+    // (current) value (workedon)
     if (log.data.value && log.data.value.personsAndTeams &&
         log.data.value.personsAndTeams.length > 0) {
       let pot = log.data.value.personsAndTeams[0]
       if (pot.kind === 'team') {
-        tree[pot.id].workedon++
+        tree[pot.id].columns[log.data.column_id] = initOrReturnColumn(tree[pot.id], log.data.column_id, log.data.column_title)
+        tree[pot.id].columns[log.data.column_id].workedon++
       }
       if (pot.kind === 'person') {
-        findTeamIds(tree, pot.id).forEach(teamId => {
-          tree[teamId].workedon++
-          tree[teamId].users[pot.id].workedon++
+        findTeamIds(tree, pot.id).forEach(tid => {
+          tree[tid].columns[log.data.column_id] = initOrReturnColumn(tree[tid], log.data.column_id, log.data.column_title)
+          tree[tid].columns[log.data.column_id].workedon++
+          tree[tid].users[pot.id].workedon++
         })
       }
     }
   })
-  return [
-    { name: 'own-solved', value: 100, fill: '#00C875' },
-    { name: 'own-unsolved', value: 2, fill: '#FFADAD' },
-    { name: 'inherited-solved', value: 20, fill: '#4ECCC6' },
-    { name: 'inherited-unsolved', value: 40, fill: '#FFCB00' },
-    { name: 'changes', value: 60, fill: '#784BD1' },
-    { name: 'activity', value: 30, fill: '#401694' }
-  ]
+  // Format stats to recharts
+  Object.keys(tree[teamId].users).forEach(id => {
+    const user = tree[teamId].users[id]
+    if (!topPerformer.handedover) topPerformer = user
+    if (user.handedover < topPerformer.handedover) topPerformer = user
+    if (!bottomPerformer.handedover) bottomPerformer = user
+    if (user.handedover > bottomPerformer.handedover) bottomPerformer = user
+  })
+  stats.push({
+    name: `least-handedover`,
+    tooltip: `${topPerformer.name} handed over the least`,
+    amount: topPerformer.handedover,
+    fill: '#00C875'
+  })
+  stats.push({
+    name: `most-handedover`,
+    tooltip: `${bottomPerformer.name} handed over the most`,
+    amount: bottomPerformer.handedover,
+    fill: '#FFCB00'
+  })
+  Object.keys(tree[teamId].columns).forEach(id => {
+    const col = tree[teamId].columns[id]
+    stats.push({
+      name: `${id}-workedon`,
+      tooltip: `${tree[teamId].name} worked on as ${col.name}`,
+      amount: col.workedon,
+      fill: '#00C875'
+    })
+    stats.push({
+      name: `${id}-handedover`,
+      tooltip: `${tree[teamId].name} handed over to another ${col.name}`,
+      amount: col.handedover,
+      fill: '#FFCB00'
+    })
+  })
+  return stats
 }
 
+export const initOrReturnColumn = (team, columnId, columnName) => {
+  if (!team.columns[columnId]) return {name: columnName, handedover: 0, workedon: 0}
+  return team.columns[columnId]
+}

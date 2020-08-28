@@ -2,9 +2,9 @@ import React from "react"
 import mondaySdk from "monday-sdk-js"
 import moment from 'moment'
 import Timeline from 'react-timelines'
-import { RadialBarChart, RadialBar, Cell, Legend, Tooltip, ResponsiveContainer, LabelList, PolarAngleAxis } from 'recharts';
+import { RadialBarChart, RadialBar, Tooltip, LabelList } from 'recharts';
 import "./App.css"
-import 'react-timelines/lib/css/style.css'
+import "./index.css"
 import { NOW, NOW_UTC_HOURS_DIFF, START_DATE, END_DATE, MIN_ZOOM, MAX_ZOOM, MONDAY_COLORS } from './constants'
 import { buildTimebar, buildTrack, buildSubtrack, buildElements, buildChartStats } from './builders'
 import { randomIndex, nextItem, nextIndex } from './utils'
@@ -121,8 +121,9 @@ class App extends React.Component {
       }`)
     })
     .then(res => {
+      // TODO: detect which teams are displayed and show next one
       this.setState({
-        stats: buildChartStats(logs, res.data.users, res.data.teams)
+        stats: buildChartStats(logs, res.data.users, res.data.teams, 330691)
       })
     })
   }
@@ -374,22 +375,21 @@ class App extends React.Component {
   }
 
   renderDashboardWidget() {
+    const { stats } = this.state
     return (
-      <div className='radial-bar-charts'>     
-        <p>Team X</p>
+      <div className='radial-bar-charts'>
         <div className="radial-bar-chart-wrapper">
           <RadialBarChart
             width={300}
             height={300}
             barCategoryGap={'5%'}
-            data={this.state.stats}
+            data={stats}
             startAngle={180}
-            endAngle={-180}
-          >
-            <RadialBar background dataKey="value">
+            endAngle={-180}>
+            <RadialBar background dataKey="amount">
               <LabelList position="end" />
             </RadialBar>
-            <Tooltip />
+            <Tooltip labelFormatter={(i) => stats[i].tooltip} />
           </RadialBarChart>
         </div>
       </div>
