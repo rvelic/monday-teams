@@ -45,11 +45,12 @@ class App extends React.Component {
         workdayStart: res.data.workdayStart || '9',
         // dashboard widget
         workdayHours: res.data.workdayHours || '8',
-        durationDays: res.data.durationDays || '7'
+        periodDays: res.data.periodDays || '7',
+        teamName: res.data.teamName
       }
       this.setState({settings})
       this.setState({workdayStartMoment: NOW.clone().hours(settings.workdayStart)})
-      // re-create timeline when settings change
+      // re-create when settings change
       if (this.state.itemIds.length > 0 && this.isBoardView()) this.createTimeline()
     })
 
@@ -67,7 +68,7 @@ class App extends React.Component {
   createChart() {
     let logs = []
     const from = NOW.clone()
-      .subtract(this.state.settings.durationDays, 'd')
+      .subtract(this.state.settings.periodDays, 'd')
       .format('YYYY-MM-DD')
     const to = NOW.format('YYYY-MM-DD')
     monday.api(`query {      
@@ -123,7 +124,12 @@ class App extends React.Component {
     .then(res => {
       // TODO: detect which teams are displayed and show next one
       this.setState({
-        stats: buildChartStats(logs, res.data.users, res.data.teams, 330691)
+        stats: buildChartStats(
+          logs,
+          res.data.users,
+          res.data.teams,
+          this.state.settings.teamName
+        )
       })
     })
   }

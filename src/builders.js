@@ -121,15 +121,9 @@ export const buildTeamTree = (users, teams) => {
   return tree
 }
 
-export const findTeamIds = (tree, userId) => Object.keys(tree)
-  .filter(teamId => Object.keys(tree[teamId].users)
-  .reduce((acc, uid) => {
-    if (acc) return true
-    return userId === parseInt(uid)
-  },false))
-
-export const buildChartStats = (logs, users, teams, teamId) => {
+export const buildChartStats = (logs, users, teams, teamName) => {
   const tree = buildTeamTree(users, teams)
+  const teamId = findTeamIdOrReturnFirst(tree, teamName)
   const stats = []
   let topPerformer = {}
   let bottomPerformer = {}
@@ -210,3 +204,17 @@ export const initOrReturnColumn = (team, columnId, columnName) => {
   if (!team.columns[columnId]) return {name: columnName, handedover: 0, workedon: 0}
   return team.columns[columnId]
 }
+
+export const findTeamIdOrReturnFirst = (tree, teamName) => {
+  const ids = Object.keys(tree)
+    .filter(id => tree[id].name === teamName)
+  if (ids.length > 0) return ids.shift()
+  return Object.keys(tree).shift()
+}
+
+export const findTeamIds = (tree, userId) => Object.keys(tree)
+  .filter(teamId => Object.keys(tree[teamId].users)
+  .reduce((acc, uid) => {
+    if (acc) return true
+    return userId === parseInt(uid)
+  },false))
