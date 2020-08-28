@@ -180,7 +180,7 @@ export const buildChartStats = (logs, users, teams, teamId) => {
     name: `least-handedover`,
     tooltip: `${topPerformer.name} handed over the least`,
     amount: topPerformer.handedover,
-    fill: '#00C875'
+    fill: '#4ECCC6'
   })
   stats.push({
     name: `most-handedover`,
@@ -194,7 +194,7 @@ export const buildChartStats = (logs, users, teams, teamId) => {
       name: `${id}-workedon`,
       tooltip: `${tree[teamId].name} worked on as ${col.name}`,
       amount: col.workedon,
-      fill: '#00C875'
+      fill: '#4ECCC6'
     })
     stats.push({
       name: `${id}-handedover`,
