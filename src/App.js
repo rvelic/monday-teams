@@ -2,7 +2,7 @@ import React from 'react'
 import mondaySdk from "monday-sdk-js"
 import moment from 'moment'
 import Timeline from 'react-timelines'
-import { RadialBarChart, RadialBar, Tooltip, LabelList } from 'recharts';
+import { RadialBarChart, RadialBar, Tooltip, LabelList, ResponsiveContainer } from 'recharts';
 import './App.css'
 import 'react-timelines/lib/css/style.css'
 import { NOW, NOW_UTC_HOURS_DIFF, START_DATE, END_DATE, MIN_ZOOM, MAX_ZOOM, MONDAY_COLORS } from './constants'
@@ -377,22 +377,18 @@ class App extends React.Component {
   renderDashboardWidget() {
     const { stats } = this.state
     return (
-      <div className='radial-bar-charts'>
-        <div className="radial-bar-chart-wrapper">
-          <RadialBarChart
-            width={300}
-            height={300}
-            barCategoryGap={'5%'}
-            data={stats}
-            startAngle={180}
-            endAngle={-180}>
-            <RadialBar background dataKey="amount">
-              <LabelList position="end" />
-            </RadialBar>
-            <Tooltip labelFormatter={(i) => stats[i].tooltip} />
-          </RadialBarChart>
-        </div>
-      </div>
+      <ResponsiveContainer width="100%" height={360}>
+        <RadialBarChart
+          barCategoryGap={'5%'}
+          data={stats}
+          startAngle={180}
+          endAngle={-180}>
+          <RadialBar background dataKey="amount">
+            <LabelList position="end" />
+          </RadialBar>
+          <Tooltip labelFormatter={(i) => stats[i].tooltip} />
+        </RadialBarChart>
+      </ResponsiveContainer>
     )
   }
 
