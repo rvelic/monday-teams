@@ -1,14 +1,22 @@
-## Overview
-This is the "Quickstart React" example Monday app. 
-<br>It can be used as a board view or dashboard widget, connected to a board and render data from the board using settings.
+# Teams (monday.com)
 
-<br>This app demonstrates how to use: 
-- [settings](https://github.com/mondaycom/monday-sdk-js#mondaygettype-params--) 
-- [context](https://github.com/mondaycom/monday-sdk-js#mondaygettype-params--) 
-- [API](https://github.com/mondaycom/monday-sdk-js#mondayapiquery-options--)
+[![button](https://dapulse-res.cloudinary.com/image/upload/f_auto,q_auto/remote_mondaycom_static/uploads/Tal/4b5d9548-0598-436e-a5b6-9bc5f29ee1d9_Group12441.png)](https://auth.monday.com/oauth2/authorize?client_id=ae7d5eccd8c37edc73c97f10f8a90757&response_type=install)
 
-<br>You can find more info in our QuickStart guide [here](https://monday.com/developers/apps/quickstart-view/)
-<br /> ![Screenshot](https://dapulse-res.cloudinary.com/image/upload/w_900/v1591485466/remote_mondaycom_static/developers/screenshots/final_view.gif)
+## Inspiration
+
+Teams is essential app for remote teams working across multiple timezones and/or working in multiple shifts.
+
+## What it does
+
+The app shows visual representation of your teams' working hours and everyone in those teams. You can easily see if your teams cover full 24 hours, where they overlap and where you have gaps to fill. You can "assign" team to all items on your board with single click e.g. to handover work from one shift to another. You can also choose to assign a random member from selected team to those items. You can add Teams Widget for each of your teams and the widget will show you statistics on number of handovers between columns you configured and top/bottom performers. The app has no opinion about how you should use it or monday.com, so it's up to you - the more information you provide in settings, the richer your experience will be.
+
+## How I built it
+
+Teams is build as a react app providing board view and a dashboard widget.
+
+## What's next for Teams
+
+Integration - automatic start & end of shifts.
 
 ## Run the project
 
