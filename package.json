@@ -19,7 +19,7 @@
     "monday-sdk-js": "0.0.16",
     "react": "^16.13.0",
     "react-dom": "^16.13.0",
-    "react-scripts": "3.4.0",
+    "react-scripts": "^3.4.3",
     "react-timelines": "^2.6.1",
     "recharts": "^1.8.5"
   },
