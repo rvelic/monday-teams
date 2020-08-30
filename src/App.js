@@ -20,6 +20,7 @@ class App extends React.Component {
       // common
       settings: {},
       context: {},
+      noteam: false,
       // board view
       workdayStartMoment: null,
       itemIds: [],
@@ -122,7 +123,7 @@ class App extends React.Component {
       }`)
     })
     .then(res => {
-      // TODO: detect which teams are displayed and show next one
+      if (res.data.teams.length < 1) this.setState({noteam: true})
       this.setState({
         stats: buildChartStats(
           logs,
@@ -176,6 +177,7 @@ class App extends React.Component {
     })
     .then(res => {
       if (res.data.teams) this.setState({teams: res.data.teams})
+      if (res.data.teams.length < 1) this.setState({noteam: true})
       this.fillTracksWithTeams()
     })
   }
@@ -398,10 +400,15 @@ class App extends React.Component {
     )
   }
 
+  renderNoTeam() {
+    return <div className="loading">Looks like you have no teams :( <br/>Make sure to add some teams in your account first.</div>
+  }
+
   isBoardView = () => this.state.context.instanceType === 'board_view'
   isDashboardWidget = () => this.state.context.instanceType === 'dashboard_widget'
 
   render() {
+    if (this.state.noteam) return this.renderNoTeam()
     if (this.isBoardView()) return this.renderBoardView()
     if (this.isDashboardWidget()) return this.renderDashboardWidget()
     return <div className="loading">...</div>
