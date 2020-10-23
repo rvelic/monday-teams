@@ -405,12 +405,17 @@ class App extends React.Component {
     return <div className="loading">Looks like you have no teams :( <br/>Make sure to add some teams in your account first.</div>
   }
 
+  renderNoTeamStats() {
+    return <div className="loading">No team data available.<span class="loading-subtitle">Make sure you have selected a team. It may take up to 24 hours to see the latest changes.</span></div>
+  }
+
   isBoardView = () => this.state.context.instanceType === 'board_view'
   isDashboardWidget = () => this.state.context.instanceType === 'dashboard_widget'
 
   render() {
     if (this.state.noteam) return this.renderNoTeam()
     if (this.isBoardView()) return this.renderBoardView()
+    if (this.state.stats.length < 1) return this.renderNoTeamStats()
     if (this.isDashboardWidget()) return this.renderDashboardWidget()
     return <div className="loading">...</div>
   }

@@ -125,6 +125,7 @@ export const buildChartStats = (logs, users, teams, teamId) => {
   const tree = buildTeamTree(users, teams)
   teamId = teamId || Object.keys(tree).shift()
   const stats = []
+  let noTeamStats = true
   let topPerformer = {}
   let bottomPerformer = {}
   // Perform analytics
@@ -176,12 +177,15 @@ export const buildChartStats = (logs, users, teams, teamId) => {
     amount: topPerformer.handedover,
     fill: '#4ECCC6'
   })
-  stats.push({
-    name: `most-handedover`,
-    tooltip: `${bottomPerformer.name} handed over the most`,
-    amount: bottomPerformer.handedover,
-    fill: '#FFCB00'
-  })
+  // Showing bottom & top if both are same doesn't make much sense
+  if (bottomPerformer.handedover > topPerformer.handedover) {
+    stats.push({
+      name: `most-handedover`,
+      tooltip: `${bottomPerformer.name} handed over the most`,
+      amount: bottomPerformer.handedover,
+      fill: '#FFCB00'
+    })
+  }
   Object.keys(tree[teamId].columns).forEach(id => {
     const col = tree[teamId].columns[id]
     stats.push({
@@ -196,8 +200,9 @@ export const buildChartStats = (logs, users, teams, teamId) => {
       amount: col.handedover,
       fill: '#FFCB00'
     })
+    noTeamStats = false
   })
-  return stats
+  return noTeamStats ? [] : stats
 }
 
 export const initOrReturnColumn = (team, columnId, columnName) => {
