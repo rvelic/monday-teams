@@ -47,7 +47,8 @@ class App extends React.Component {
         // dashboard widget
         workdayHours: res.data.workdayHours || '8',
         periodDays: res.data.periodDays || '7',
-        teamName: res.data.teamName
+        // always select from teams and only the first item
+        teamId: res.data.users.teams[0]
       }
       this.setState({settings})
       this.setState({workdayStartMoment: NOW.clone().hours(settings.workdayStart)})
@@ -129,7 +130,7 @@ class App extends React.Component {
           logs,
           res.data.users,
           res.data.teams,
-          this.state.settings.teamName
+          this.state.settings.teamId
         )
       })
     })

@@ -121,9 +121,9 @@ export const buildTeamTree = (users, teams) => {
   return tree
 }
 
-export const buildChartStats = (logs, users, teams, teamName) => {
+export const buildChartStats = (logs, users, teams, teamId) => {
   const tree = buildTeamTree(users, teams)
-  const teamId = findTeamIdOrReturnFirst(tree, teamName)
+  const teamId = teamId || Object.keys(tree).shift()
   const stats = []
   let topPerformer = {}
   let bottomPerformer = {}
@@ -203,13 +203,6 @@ export const buildChartStats = (logs, users, teams, teamName) => {
 export const initOrReturnColumn = (team, columnId, columnName) => {
   if (!team.columns[columnId]) return {name: columnName, handedover: 0, workedon: 0}
   return team.columns[columnId]
-}
-
-export const findTeamIdOrReturnFirst = (tree, teamName) => {
-  const ids = Object.keys(tree)
-    .filter(id => tree[id].name === teamName)
-  if (ids.length > 0) return ids.shift()
-  return Object.keys(tree).shift()
 }
 
 export const findTeamIds = (tree, userId) => Object.keys(tree)
