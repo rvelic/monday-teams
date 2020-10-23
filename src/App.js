@@ -3,8 +3,8 @@ import mondaySdk from "monday-sdk-js"
 import moment from 'moment'
 import Timeline from 'react-timelines'
 import { RadialBarChart, RadialBar, Tooltip, LabelList, ResponsiveContainer } from 'recharts';
-import './App.css'
 import 'react-timelines/lib/css/style.css'
+import './App.css'
 import { NOW, NOW_UTC_HOURS_DIFF, START_DATE, END_DATE, MIN_ZOOM, MAX_ZOOM, MONDAY_COLORS } from './constants'
 import { buildTimebar, buildTrack, buildSubtrack, buildElements, buildChartStats } from './builders'
 import { randomIndex, nextItem, nextIndex } from './utils'
@@ -48,8 +48,9 @@ class App extends React.Component {
         workdayHours: res.data.workdayHours || '8',
         periodDays: res.data.periodDays || '7',
         // always select from teams and only the first item
-        teamId: res.data.users.teams[0]
+        teamId: res.data.users ? res.data.users.teams[0] : undefined
       }
+      
       this.setState({settings})
       this.setState({workdayStartMoment: NOW.clone().hours(settings.workdayStart)})
       // re-create when settings change
