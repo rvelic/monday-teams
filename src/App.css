@@ -24,3 +24,7 @@ body {
 .loading a {
   color: #1f76c2;
 }
+
+.rt-timeline {
+  min-height: 1000px;
+}
