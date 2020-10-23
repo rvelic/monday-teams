@@ -123,7 +123,7 @@ export const buildTeamTree = (users, teams) => {
 
 export const buildChartStats = (logs, users, teams, teamId) => {
   const tree = buildTeamTree(users, teams)
-  const teamId = teamId || Object.keys(tree).shift()
+  teamId = teamId || Object.keys(tree).shift()
   const stats = []
   let topPerformer = {}
   let bottomPerformer = {}
